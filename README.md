@@ -49,7 +49,7 @@ both of the methods above install the repository in [editable mode](https://pip.
 ### Running a specific conversion
 To run a specific conversion, you might need to install first some conversion specific dependencies that are located in each conversion directory:
 ```
-pip install -r src/pinto_lab_to_nwb/into_the_void/into_the_void_requirements.txt 
+pip install -r src/pinto_lab_to_nwb/into_the_void/into_the_void_requirements.txt
 ```
 
 You can run a specific conversion with the following command:
@@ -85,7 +85,7 @@ Each conversion is organized in a directory of its own in the `src` directory:
 
  For example, for the conversion `into_the_void` you can find a directory located in `src/pinto-lab-to-nwb/into_the_void`. Inside each conversion directory you can find the following files:
 
-* `into_the_void_convert_sesion.py`: this script defines the function to convert one full session of the conversion. 
+* `into_the_void_convert_sesion.py`: this script defines the function to convert one full session of the conversion.
 * `into_the_void_requirements.txt`: dependencies specific to this conversion.
 * `into_the_void_metadata.yml`: metadata in yaml format for this specific conversion.
 * `into_the_voidbehaviorinterface.py`: the behavior interface. Usually ad-hoc for each conversion.
@@ -93,4 +93,3 @@ Each conversion is organized in a directory of its own in the `src` directory:
 * `into_the_void_notes.md`: notes and comments concerning this specific conversion.
 
 The directory might contain other files that are necessary for the conversion but those are the central ones.
-
