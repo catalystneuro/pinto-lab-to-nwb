@@ -33,9 +33,9 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
         session = self._mat_dict["session"]
         experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
-        format_string = "%m/%d/%Y %I:%M:%S %p"
-        date_from_mat = f"{session['date']} {session['time']}"
-        session_start_time = datetime.strptime(date_from_mat, format_string)
+        # format_string = "%m/%d/%Y %I:%M:%S %p"
+        # date_from_mat = f"{session['date']} {session['time']}"
+        # session_start_time = datetime.strptime(date_from_mat, format_string)
 
         metadata_from_mat_dict = dict(
             Subject=dict(subject_id=session["animal"]),  # , sex="U", species="Mus musculus"),
@@ -46,10 +46,12 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
         return metadata
 
-    def add_lab_meta_data(self, nwbfile: NWBFile, metadata: dict):
+    def add_lab_meta_data(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
 
-        session_start_time = metadata["NWBFile"]["session_start_time"]
+        format_string = "%m/%d/%Y %I:%M:%S %p"
+        date_from_mat = f"{session['date']} {session['time']}"
+        session_start_time = datetime.strptime(date_from_mat, format_string)
         session_end_time = session_start_time + timedelta(seconds=session["sessionTime"])
 
         maze_extension = MazeExtension(name="mazes", description="description of the mazes")
@@ -232,7 +234,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         behavior.add(velocity_gain_ts)
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
-        self.add_lab_meta_data(nwbfile=nwbfile, metadata=metadata)
+        self.add_lab_meta_data(nwbfile=nwbfile)
         self.add_trials(nwbfile=nwbfile)
         self.add_position(nwbfile=nwbfile)
         self.add_events(nwbfile=nwbfile)
