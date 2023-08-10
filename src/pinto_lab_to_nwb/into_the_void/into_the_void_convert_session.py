@@ -33,6 +33,7 @@ def session_to_nwb(
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
+    two_photon_imaging_folder_path = Path(two_photon_imaging_folder_path)
 
     source_data = dict()
     conversion_options = dict()
