@@ -65,7 +65,7 @@ def session_to_nwb(
     # Update metadata with subject_id and session_id from folder_path
     # NCCR51_2023_04_07_no_task_dual_color_jrgeco_t_series-001
     file_naming_pattern = r"^(?P<subject_id>[^_]+)_(?:\d{4}_\d{2}_\d{2}_)(?P<session_id>.+)"
-    match = re.match(file_naming_pattern, str(two_photon_imaging_folder_path))
+    match = re.match(file_naming_pattern, str(two_photon_imaging_folder_path.name))
     if match:
         groups_dict = match.groupdict()
         metadata["NWBFile"].update(session_id=groups_dict["session_id"].replace("_", "-"))
