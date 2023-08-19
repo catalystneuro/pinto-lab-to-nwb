@@ -1,20 +1,21 @@
 """Primary class for converting experiment-specific behavior."""
-from datetime import datetime, timedelta
+from datetime import datetime
+from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import scipy
 from hdmf.backends.hdf5 import H5DataIO
 from neuroconv.tools.nwb_helpers import get_module
 from pynwb import TimeSeries
 from pynwb.behavior import Position, CompassDirection, BehavioralEvents
-from scipy.io import loadmat
-from scipy.io.matlab import mat_struct
 from pynwb.file import NWBFile
 
-from neuroconv.utils import FilePathType, dict_deep_update
+from neuroconv.utils import FilePathType, dict_deep_update, load_dict_from_file
 from neuroconv.basedatainterface import BaseDataInterface
 
-from ndx_tank_metadata import RigExtension, LabMetaDataExtension, MazeExtension
+from ndx_pinto_metadata import LabMetaDataExtension, MazeExtension, StimulusProtocolExtension
+from ndx_pinto_metadata.utils.mat_utils import convert_mat_file_to_dict, create_indexed_array
 
 from pinto_lab_to_nwb.behavior.utils import convert_mat_file_to_dict
 
@@ -28,59 +29,89 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         self._mat_dict = convert_mat_file_to_dict(mat_file_name=file_path)
 
     def get_metadata(self):
-        # Automatically retrieve as much metadata as possible
         metadata = super().get_metadata()
 
         session = self._mat_dict["session"]
         experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
-        # format_string = "%m/%d/%Y %I:%M:%S %p"
-        # date_from_mat = f"{session['date']} {session['time']}"
-        # session_start_time = datetime.strptime(date_from_mat, format_string)
-
-        metadata_from_mat_dict = dict(
-            Subject=dict(subject_id=session["animal"]),  # , sex="U", species="Mus musculus"),
-            NWBFile=dict(experimenter=experimenter)
-            # session_start_time=session_start_time)
-        )
-        metadata = dict_deep_update(metadata, metadata_from_mat_dict)
-
-        return metadata
-
-    def add_lab_meta_data(self, nwbfile: NWBFile):
-        session = self._mat_dict["session"]
-
         format_string = "%m/%d/%Y %I:%M:%S %p"
         date_from_mat = f"{session['date']} {session['time']}"
         session_start_time = datetime.strptime(date_from_mat, format_string)
-        session_end_time = session_start_time + timedelta(seconds=session["sessionTime"])
 
-        maze_extension = MazeExtension(name="mazes", description="description of the mazes")
+        metadata_from_mat_dict = dict(
+            Subject=dict(subject_id=session["animal"], sex="U", species="Mus musculus"),
+            NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),)
 
-        mazes = session["protocol"]["mazes"]
-        mazes_criteria = session["protocol"]["criteria"]
+        metadata = dict_deep_update(metadata, metadata_from_mat_dict)
 
-        for row_ind, criteria_row in enumerate(mazes_criteria):
-            for k, v in criteria_row.items():
-                if isinstance(v, np.ndarray):
-                    mazes_criteria[row_ind][k] = np.nan if not len(v) else v[0]  # todo fix
-                else:
-                    mazes_criteria[row_ind][k] = float(v)
+        # load stimulus protocol name mapping from yaml
+        metadata_from_yaml = load_dict_from_file(file_path=Path(__file__).parent.parent / "metadata" / "virmen_metadata.yaml")
+        metadata = dict_deep_update(metadata, metadata_from_yaml)
 
-        for maze_row_ind, (maze_row, criteria_row) in enumerate(zip(mazes, mazes_criteria)):
-            maze_row = dict_deep_update(maze_row, criteria_row)
-            row = dict((k, v) for k, v in maze_row.items() if k in MazeExtension.mazes_attr)
-            maze_extension.add_row(**row)
+        return metadata
+
+    def add_lab_meta_data(self, metadata: dict, nwbfile: NWBFile):
+
+        session = self._mat_dict["session"]
+
+        experiment_name = session["experiment"].replace(".mat", "")
+        maze_extension = MazeExtension(name="mazes", description=f"The parameters for the mazes in {experiment_name}.")
+
+        mazes = session["protocol"].pop("mazes")
+        for maze in mazes:
+            maze_extension.add_row(
+                **maze,
+            )
+
+        criteria = session["protocol"].pop("criteria")
+        mazes_criteria_df = pd.DataFrame.from_records(criteria)
+        for maze_column in mazes_criteria_df:
+            maze_kwargs = dict(
+                name=maze_column,
+                description="maze information",
+            )
+            if mazes_criteria_df[maze_column].dtype == object:
+                indexed_array, indexed_array_indices = create_indexed_array(mazes_criteria_df[maze_column].values)
+                maze_kwargs.update(
+                    data=list(indexed_array),
+                    index=list(indexed_array_indices),
+                )
+            else:
+                maze_kwargs.update(data=mazes_criteria_df[maze_column].values.tolist(),)
+
+            maze_extension.add_column(**maze_kwargs)
+
+        stimulus_protocol_metadata = metadata["StimulusProtocolExtension"]
+        global_settings = session["protocol"].pop("globalSettings")
+
+        global_settings = dict((global_settings[i], global_settings[i + 1]) for i in range(0, len(global_settings), 2))
+        session_protocol = dict_deep_update(session["protocol"], global_settings)
+
+        stimulus_protocol_kwargs = dict()
+        for protocol_key, protocol_value in session_protocol.items():
+            if protocol_key in StimulusProtocolExtension.__nwbfields__:
+                stimulus_protocol_kwargs[protocol_key] = session_protocol[protocol_key]
+            elif protocol_key in stimulus_protocol_metadata:
+                protocol_key_from_metadata = stimulus_protocol_metadata[protocol_key]
+                stimulus_protocol_kwargs[protocol_key_from_metadata] = session_protocol[protocol_key]
+
+        stimulus_protocol = StimulusProtocolExtension(
+            name="stimulus_protocol",
+            **stimulus_protocol_kwargs,
+        )
 
         lab_metadata_kwargs = dict(
             name="LabMetaData",
             experiment_name=session["experiment"].replace(".mat", ""),
-            num_trials=session["nTrials"],
+            session_index=session["sessionIndex"],
             total_reward=session["totalReward"],
+            squal=session["squal"],
+            rig=session["rig"],
+            num_trials=session["nTrials"],
             num_iterations=session["nIterations"],
+            session_duration=session["sessionTime"],
             advance=session["advance"],
-            session_end_time=str(session_end_time),
-            rig=RigExtension(name="rig", rig=session["rig"]),
             mazes=maze_extension,
+            stimulus_protocol=stimulus_protocol,
         )
 
         # Add to file
@@ -234,7 +265,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         behavior.add(velocity_gain_ts)
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
-        self.add_lab_meta_data(nwbfile=nwbfile)
+        self.add_lab_meta_data(nwbfile=nwbfile, metadata=metadata)
         self.add_trials(nwbfile=nwbfile)
         self.add_position(nwbfile=nwbfile)
         self.add_events(nwbfile=nwbfile)

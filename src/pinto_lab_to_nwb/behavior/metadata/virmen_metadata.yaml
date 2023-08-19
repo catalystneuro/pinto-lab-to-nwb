@@ -1,0 +1,10 @@
+StimulusProtocolExtension:
+  cueMinSeparation: cue_min_separation
+  totalRepeatProbability: trial_repeat_probability
+  numRepeatTrials: num_repeat_trials
+  visualcolor: visual_color
+  memorycolor: memory_color
+  princetonImplementation: is_princeton_implementation
+  numMazesInProtocol: num_mazes_in_protocol
+  trialDraw: trial_draw
+  stimDraw: stimulus_draw
