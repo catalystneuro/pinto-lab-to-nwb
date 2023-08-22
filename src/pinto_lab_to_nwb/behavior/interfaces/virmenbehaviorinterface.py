@@ -41,18 +41,20 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
         metadata_from_mat_dict = dict(
             Subject=dict(subject_id=session["animal"], sex="U", species="Mus musculus"),
-            NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),)
+            NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
+        )
 
         metadata = dict_deep_update(metadata, metadata_from_mat_dict)
 
         # load stimulus protocol name mapping from yaml
-        metadata_from_yaml = load_dict_from_file(file_path=Path(__file__).parent.parent / "metadata" / "virmen_metadata.yaml")
+        metadata_from_yaml = load_dict_from_file(
+            file_path=Path(__file__).parent.parent / "metadata" / "virmen_metadata.yaml"
+        )
         metadata = dict_deep_update(metadata, metadata_from_yaml)
 
         return metadata
 
     def add_lab_meta_data(self, metadata: dict, nwbfile: NWBFile):
-
         session = self._mat_dict["session"]
 
         experiment_name = session["experiment"].replace(".mat", "")
@@ -78,7 +80,9 @@ class ViRMENBehaviorInterface(BaseDataInterface):
                     index=list(indexed_array_indices),
                 )
             else:
-                maze_kwargs.update(data=mazes_criteria_df[maze_column].values.tolist(),)
+                maze_kwargs.update(
+                    data=mazes_criteria_df[maze_column].values.tolist(),
+                )
 
             maze_extension.add_column(**maze_kwargs)
 
