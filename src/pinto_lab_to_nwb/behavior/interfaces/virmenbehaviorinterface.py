@@ -178,7 +178,9 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         for cue_column in columns_to_add:
             cue_parameters_table.add_column(name=cue_column, description=f"{cue_params_name} cue parameter.")
         for trial_ind in range(session["nTrials"]):
-            cue_parameters_per_trial = dict((k, v) for k, v in cue_parameters[trial_ind][cue_params_name].items() if k in columns_to_add)
+            cue_parameters_per_trial = dict(
+                (k, v) for k, v in cue_parameters[trial_ind][cue_params_name].items() if k in columns_to_add
+            )
             cue_parameters_table.add_row(**cue_parameters_per_trial)
 
         for cue_column in columns_to_indexed_array:
@@ -315,6 +317,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         self.add_events(nwbfile=nwbfile)
 
         return nwbfile
+
 
 # NCCR47_TowersTaskSwitchEasy_Session_20230522_105332
 # Coriander_DelayedMatchToEvidence_Session_20230615_101750
