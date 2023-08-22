@@ -317,13 +317,3 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         self.add_events(nwbfile=nwbfile)
 
         return nwbfile
-
-
-# NCCR47_TowersTaskSwitchEasy_Session_20230522_105332
-# Coriander_DelayedMatchToEvidence_Session_20230615_101750
-# JsCheddarGeese_TowersTaskSwitchEasy_Session_20230522_151257
-fname = "JsCheddarGeese_TowersTaskSwitchEasy_Session_20230522_151257"
-behavior_file_path = f"/Volumes/t7-ssd/Pinto/Behavior/{fname}.mat"
-interface = ViRMENBehaviorInterface(file_path=behavior_file_path)
-metadata = interface.get_metadata()
-interface.run_conversion(nwbfile_path=f"{fname}.nwb", overwrite=True)
