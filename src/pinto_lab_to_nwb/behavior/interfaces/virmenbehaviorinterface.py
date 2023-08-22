@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import scipy
 from hdmf.backends.hdf5 import H5DataIO
+from hdmf.common import DynamicTable
 from neuroconv.tools.nwb_helpers import get_module
 from pynwb import TimeSeries
 from pynwb.behavior import Position, CompassDirection, BehavioralEvents
@@ -16,6 +17,7 @@ from neuroconv.basedatainterface import BaseDataInterface
 
 from ndx_pinto_metadata import LabMetaDataExtension, MazeExtension, StimulusProtocolExtension
 from ndx_pinto_metadata.utils.mat_utils import convert_mat_file_to_dict, create_indexed_array
+from scipy.io.matlab import MatlabOpaque
 
 from pinto_lab_to_nwb.behavior.utils import convert_mat_file_to_dict
 
@@ -153,6 +155,44 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         # todo need descriptions for "mazeID", "mainMazeID", etc.
         # startTime is different from trial start time
         # need discription for cueParams
+
+        cue_parameters = performance["cueParams"]
+        cue_params_name = list(cue_parameters[0].keys())[0]
+
+        columns_to_skip = []
+        columns_to_indexed_array = []
+        columns_to_add = []
+        for column_name, column_value in cue_parameters[0][cue_params_name].items():
+            if isinstance(column_value, MatlabOpaque):
+                columns_to_skip.append(column_name)
+            elif isinstance(column_value, np.ndarray):
+                columns_to_indexed_array.append(column_name)
+            else:
+                columns_to_add.append(column_name)
+
+        cue_parameters_table = DynamicTable(name=cue_params_name, description="Holds cue parameters for each trial.")
+        for cue_column in columns_to_add:
+            cue_parameters_table.add_column(name=cue_column, description=f"{cue_params_name} cue parameter.")
+        for trial_ind in range(session["nTrials"]):
+            cue_parameters_per_trial = dict((k, v) for k, v in cue_parameters[trial_ind][cue_params_name].items() if k in columns_to_add)
+            cue_parameters_table.add_row(**cue_parameters_per_trial)
+
+        for cue_column in columns_to_indexed_array:
+            to_indexed_array = []
+            for trial_ind in range(session["nTrials"]):
+                to_indexed_array.append(cue_parameters[trial_ind][cue_params_name][cue_column])
+
+            indexed_array, indexed_array_indices = create_indexed_array(to_indexed_array)
+            cue_parameters_table.add_column(
+                name=cue_column,
+                description=f"{cue_params_name} indexed cue parameter.",
+                data=indexed_array,
+                index=indexed_array_indices,
+            )
+
+        behavior = get_module(nwbfile, "behavior", "contains processed behavioral data")
+        behavior.add(cue_parameters_table)
+
         performance_column_names = [column for column in performance.keys() if column not in ["cueParams"]]
         for performance_column in performance_column_names:
             data = performance[performance_column]
@@ -271,3 +311,12 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         self.add_events(nwbfile=nwbfile)
 
         return nwbfile
+
+# NCCR47_TowersTaskSwitchEasy_Session_20230522_105332
+# Coriander_DelayedMatchToEvidence_Session_20230615_101750
+# JsCheddarGeese_TowersTaskSwitchEasy_Session_20230522_151257
+fname = "JsCheddarGeese_TowersTaskSwitchEasy_Session_20230522_151257"
+behavior_file_path = f"/Volumes/t7-ssd/Pinto/Behavior/{fname}.mat"
+interface = ViRMENBehaviorInterface(file_path=behavior_file_path)
+metadata = interface.get_metadata()
+interface.run_conversion(nwbfile_path=f"{fname}.nwb", overwrite=True)
