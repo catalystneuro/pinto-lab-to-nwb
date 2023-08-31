@@ -200,11 +200,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
         for cue_column in columns_to_add:
             data = [cue_parameters[cue_params_name][trial_ind][cue_column] for trial_ind in range(session["nTrials"])]
-            nwbfile.trials.add_column(
-                name=cue_column,
-                description=f"{cue_params_name} cue parameter.",
-                data=data
-            )
+            nwbfile.trials.add_column(name=cue_column, description=f"{cue_params_name} cue parameter.", data=data)
 
         for performance_column, data in performance.items():
             if isinstance(data, list):
