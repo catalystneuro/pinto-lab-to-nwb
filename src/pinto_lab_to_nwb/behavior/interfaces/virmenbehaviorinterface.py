@@ -13,7 +13,7 @@ from pynwb import TimeSeries
 from pynwb.behavior import Position, CompassDirection, BehavioralEvents
 from pynwb.file import NWBFile
 
-from neuroconv.utils import FilePathType, dict_deep_update, load_dict_from_file
+from neuroconv.utils import FilePathType, dict_deep_update
 from neuroconv.basedatainterface import BaseDataInterface
 
 from ndx_pinto_metadata import LabMetaDataExtension, MazeExtension
@@ -38,21 +38,15 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         session_start_time = datetime.strptime(date_from_mat, format_string)
 
         metadata_from_mat_dict = dict(
-            Subject=dict(subject_id=session["animal"], sex="U", species="Mus musculus"),
+            Subject=dict(subject_id=session["animal"]),
             NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
         )
 
         metadata = dict_deep_update(metadata, metadata_from_mat_dict)
 
-        # load stimulus protocol name mapping from yaml
-        metadata_from_yaml = load_dict_from_file(
-            file_path=Path(__file__).parent.parent / "metadata" / "virmen_metadata.yaml"
-        )
-        metadata = dict_deep_update(metadata, metadata_from_yaml)
-
         return metadata
 
-    def add_lab_meta_data(self, metadata: dict, nwbfile: NWBFile):
+    def add_lab_meta_data(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
 
         experiment_name = session["experiment"].replace(".mat", "")
@@ -322,7 +316,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         behavior.add(velocity_gain_ts)
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
-        self.add_lab_meta_data(nwbfile=nwbfile, metadata=metadata)
+        self.add_lab_meta_data(nwbfile=nwbfile)
         self.add_trials(nwbfile=nwbfile)
         self.add_position(nwbfile=nwbfile)
         self.add_events(nwbfile=nwbfile)
