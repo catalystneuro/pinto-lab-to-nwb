@@ -8,6 +8,7 @@ import scipy
 from hdmf.backends.hdf5 import H5DataIO
 from hdmf.common import DynamicTable
 from neuroconv.tools.nwb_helpers import get_module
+from pymatreader import read_mat
 from pynwb import TimeSeries
 from pynwb.behavior import Position, CompassDirection, BehavioralEvents
 from pynwb.file import NWBFile
@@ -15,11 +16,8 @@ from pynwb.file import NWBFile
 from neuroconv.utils import FilePathType, dict_deep_update, load_dict_from_file
 from neuroconv.basedatainterface import BaseDataInterface
 
-from ndx_pinto_metadata import LabMetaDataExtension, MazeExtension, StimulusProtocolExtension
-from ndx_pinto_metadata.utils.mat_utils import convert_mat_file_to_dict, create_indexed_array
-from scipy.io.matlab import MatlabOpaque
-
-from pinto_lab_to_nwb.behavior.utils import convert_mat_file_to_dict
+from ndx_pinto_metadata import LabMetaDataExtension, MazeExtension
+from ..utils import create_indexed_array
 
 
 class ViRMENBehaviorInterface(BaseDataInterface):
@@ -28,7 +26,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
     def __init__(self, file_path: FilePathType, verbose: bool = True):
         self.verbose = verbose
         super().__init__(file_path=file_path)
-        self._mat_dict = convert_mat_file_to_dict(mat_file_name=file_path)
+        self._mat_dict = read_mat(filename=file_path)
 
     def get_metadata(self):
         metadata = super().get_metadata()
@@ -58,12 +56,20 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         session = self._mat_dict["session"]
 
         experiment_name = session["experiment"].replace(".mat", "")
-        maze_extension = MazeExtension(name="mazes", description=f"The parameters for the mazes in {experiment_name}.")
+        experiment_code = session["experimentcode"]["function_handle"]["function"]
 
         mazes = session["protocol"].pop("mazes")
+        maze_extension = MazeExtension(
+            name="mazes",
+            description=f"The parameters for the mazes in {experiment_name}.",
+            id=list(list(mazes.values())[0]),
+        )
+
         for maze in mazes:
-            maze_extension.add_row(
-                **maze,
+            maze_extension.add_column(
+                name=maze,
+                description="maze column",
+                data=mazes[maze],
             )
 
         criteria = session["protocol"].pop("criteria")
@@ -86,28 +92,32 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
             maze_extension.add_column(**maze_kwargs)
 
-        stimulus_protocol_metadata = metadata["StimulusProtocolExtension"]
         global_settings = session["protocol"].pop("globalSettings")
 
         global_settings = dict((global_settings[i], global_settings[i + 1]) for i in range(0, len(global_settings), 2))
         session_protocol = dict_deep_update(session["protocol"], global_settings)
 
-        stimulus_protocol_kwargs = dict()
-        for protocol_key, protocol_value in session_protocol.items():
-            if protocol_key in StimulusProtocolExtension.__nwbfields__:
-                stimulus_protocol_kwargs[protocol_key] = session_protocol[protocol_key]
-            elif protocol_key in stimulus_protocol_metadata:
-                protocol_key_from_metadata = stimulus_protocol_metadata[protocol_key]
-                stimulus_protocol_kwargs[protocol_key_from_metadata] = session_protocol[protocol_key]
-
-        stimulus_protocol = StimulusProtocolExtension(
+        stimulus_code = session_protocol.pop("stimulusGenerator")
+        stimulus_code_str = stimulus_code["function_handle"]["function"]
+        session_protocol.update(stimulus_code=stimulus_code_str)
+        session_protocol.pop("stimulusParameters")
+        # Create stimulus protocol with global settings
+        stimulus_protocol = DynamicTable(
             name="stimulus_protocol",
-            **stimulus_protocol_kwargs,
+            description="Holds information about the stimulus protocol.",
         )
 
+        for column_name in session_protocol:
+            stimulus_protocol.add_column(
+                name=column_name,
+                description="stimulus protocol parameter.",
+            )
+
+        stimulus_protocol.add_row(**session_protocol)
         lab_metadata_kwargs = dict(
             name="LabMetaData",
             experiment_name=session["experiment"].replace(".mat", ""),
+            experiment_code=experiment_code,
             session_index=session["sessionIndex"],
             total_reward=session["totalReward"],
             squal=session["squal"],
@@ -120,7 +130,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             stimulus_protocol=stimulus_protocol,
         )
 
-        # Add to file
+        # Add to NWBfile
         nwbfile.add_lab_meta_data(lab_meta_data=LabMetaDataExtension(**lab_metadata_kwargs))
 
     def add_trials(self, nwbfile: NWBFile):
@@ -131,17 +141,18 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         trial_start_times_flatten = np.squeeze(trial_start_times.toarray())
         trial_end_times = trials["EndOfTrial"]
         trial_end_times_flatten = np.squeeze(trial_end_times.toarray())
+        num_trials = session["nTrials"]
 
-        for trial_ind in range(session["nTrials"]):
+        for trial_ind in range(num_trials):
             nwbfile.add_trial(
                 start_time=trial_start_times_flatten[trial_ind],
                 stop_time=trial_end_times_flatten[trial_ind],
             )
 
-        custom_trial_columns = [k for k in trials.keys() if k not in ["StartOfTrial", "EndOfTrial"]]
+        custom_trial_columns = [k for k in trials.keys() if k not in ["StartOfTrial", "EndOfTrial", "EndOfExperiment"]]
         for custom_trial_column in custom_trial_columns:
             trial_column_shape = trials[custom_trial_column].shape[0]
-            if trial_column_shape == 0 or trial_column_shape < (session["nTrials"]) - 1:
+            if trial_column_shape == 0:
                 continue
 
             custom_trial_times = np.squeeze(trials[custom_trial_column].toarray())
@@ -149,67 +160,67 @@ class ViRMENBehaviorInterface(BaseDataInterface):
                 # the last trial doesn't have a value
                 custom_trial_times = np.append(custom_trial_times, np.nan)
 
+            if trial_column_shape < num_trials and custom_trial_column != "InterTrial":
+                padding = np.full(num_trials - trial_column_shape, np.nan)
+                custom_trial_times = np.concatenate([custom_trial_times, padding], axis=0)
+
             nwbfile.add_trial_column(
                 name=custom_trial_column,
-                description="A custom trial column.",  # todo get mapping
+                description="A custom trial column.",
                 data=custom_trial_times,
             )
 
         performance = session["performance"]
-        # todo need descriptions for "mazeID", "mainMazeID", etc.
-        # startTime is different from trial start time
-        # need discription for cueParams
-
-        cue_parameters = performance["cueParams"]
-        cue_params_name = list(cue_parameters[0].keys())[0]
+        cue_parameters = performance.pop("cueParams")
+        cue_params_name = session["protocol"]["stimulusGenerator"]["function_handle"]["function"]
 
         columns_to_skip = []
         columns_to_indexed_array = []
         columns_to_add = []
-        for column_name, column_value in cue_parameters[0][cue_params_name].items():
-            if isinstance(column_value, MatlabOpaque):
+        for column_name, column_value in cue_parameters[cue_params_name][0].items():
+            if isinstance(column_value, dict):
                 columns_to_skip.append(column_name)
             elif isinstance(column_value, np.ndarray):
                 columns_to_indexed_array.append(column_name)
             else:
                 columns_to_add.append(column_name)
 
-        cue_parameters_table = DynamicTable(name=cue_params_name, description="Holds cue parameters for each trial.")
-        for cue_column in columns_to_add:
-            cue_parameters_table.add_column(name=cue_column, description=f"{cue_params_name} cue parameter.")
-        for trial_ind in range(session["nTrials"]):
-            cue_parameters_per_trial = dict(
-                (k, v) for k, v in cue_parameters[trial_ind][cue_params_name].items() if k in columns_to_add
-            )
-            cue_parameters_table.add_row(**cue_parameters_per_trial)
-
+        # Add to trials table
         for cue_column in columns_to_indexed_array:
             to_indexed_array = []
             for trial_ind in range(session["nTrials"]):
-                to_indexed_array.append(cue_parameters[trial_ind][cue_params_name][cue_column])
-
+                to_indexed_array.append(cue_parameters[cue_params_name][trial_ind][cue_column])
             indexed_array, indexed_array_indices = create_indexed_array(to_indexed_array)
-            cue_parameters_table.add_column(
+            nwbfile.trials.add_column(
                 name=cue_column,
                 description=f"{cue_params_name} indexed cue parameter.",
                 data=indexed_array,
                 index=indexed_array_indices,
             )
 
-        behavior = get_module(nwbfile, "behavior", "contains processed behavioral data")
-        behavior.add(cue_parameters_table)
+        for cue_column in columns_to_add:
+            data = [cue_parameters[cue_params_name][trial_ind][cue_column] for trial_ind in range(session["nTrials"])]
+            nwbfile.trials.add_column(
+                name=cue_column,
+                description=f"{cue_params_name} cue parameter.",
+                data=data
+            )
 
-        performance_column_names = [column for column in performance.keys() if column not in ["cueParams"]]
-        for performance_column in performance_column_names:
-            data = performance[performance_column]
+        for performance_column, data in performance.items():
+            if isinstance(data, list):
+                data = np.array(data)
+
             if data.shape[0] == 0:
+                continue
+
+            if performance_column in nwbfile.trials.colnames:
                 continue
 
             if isinstance(data, scipy.sparse._csc.csc_matrix):
                 data = np.squeeze(data.toarray())
             nwbfile.add_trial_column(
                 name=performance_column,
-                description="A custom performance column.",  # todo add mapping
+                description="A custom performance column.",
                 data=data,
             )
 
