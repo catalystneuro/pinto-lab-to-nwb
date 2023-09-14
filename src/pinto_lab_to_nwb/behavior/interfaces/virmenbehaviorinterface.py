@@ -1,23 +1,25 @@
 """Primary class for converting experiment-specific behavior."""
 from datetime import datetime
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import scipy
 from hdmf.backends.hdf5 import H5DataIO
 from hdmf.common import DynamicTable
-from neuroconv.tools.nwb_helpers import get_module
 from pymatreader import read_mat
 from pynwb import TimeSeries
-from pynwb.behavior import Position, CompassDirection, BehavioralEvents
+from pynwb.behavior import Position, CompassDirection
 from pynwb.file import NWBFile
 
 from neuroconv.utils import FilePathType, dict_deep_update
 from neuroconv.basedatainterface import BaseDataInterface
+from neuroconv.tools.nwb_helpers import get_module
+from neuroconv.tools.signal_processing import get_rising_frames_from_ttl
 
 from ndx_pinto_metadata import LabMetaDataExtension, MazeExtension
-from ..utils import create_indexed_array
+from ndx_events import Events
+
+from pinto_lab_to_nwb.behavior.utils import create_indexed_array
 
 
 class ViRMENBehaviorInterface(BaseDataInterface):
@@ -38,7 +40,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         session_start_time = datetime.strptime(date_from_mat, format_string)
 
         metadata_from_mat_dict = dict(
-            Subject=dict(subject_id=session["animal"]),
+            Subject=dict(subject_id=session["animal"], age="P7D", sex="U", species="Mus musculus"),
             NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
         )
 
@@ -114,7 +116,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             experiment_code=experiment_code,
             session_index=session["sessionIndex"],
             total_reward=session["totalReward"],
-            squal=session["squal"],
+            surface_quality=session["squal"],
             rig=session["rig"],
             num_trials=session["nTrials"],
             num_iterations=session["nIterations"],
@@ -130,10 +132,10 @@ class ViRMENBehaviorInterface(BaseDataInterface):
     def add_trials(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
 
-        trials = session["BehaviorTimes"]
-        trial_start_times = trials["StartOfTrial"]
+        behavior_times = session["BehaviorTimes"]
+        trial_start_times = behavior_times["StartOfTrial"]
         trial_start_times_flatten = np.squeeze(trial_start_times.toarray())
-        trial_end_times = trials["EndOfTrial"]
+        trial_end_times = behavior_times["EndOfTrial"]
         trial_end_times_flatten = np.squeeze(trial_end_times.toarray())
         num_trials = session["nTrials"]
 
@@ -143,15 +145,15 @@ class ViRMENBehaviorInterface(BaseDataInterface):
                 stop_time=trial_end_times_flatten[trial_ind],
             )
 
-        custom_trial_columns = [k for k in trials.keys() if k not in ["StartOfTrial", "EndOfTrial", "EndOfExperiment"]]
+        custom_trial_columns = [k for k in behavior_times.keys() if k not in ["StartOfTrial", "EndOfTrial", "EndOfExperiment"]]
         for custom_trial_column in custom_trial_columns:
-            trial_column_shape = trials[custom_trial_column].shape[0]
+            trial_column_shape = behavior_times[custom_trial_column].shape[0]
             if trial_column_shape == 0:
                 continue
 
-            custom_trial_times = np.squeeze(trials[custom_trial_column].toarray())
+            custom_trial_times = np.squeeze(behavior_times[custom_trial_column].toarray())
             if custom_trial_column == "InterTrial":
-                # the last trial doesn't have a value
+                # the last 'InterTrial' doesn't have a value
                 custom_trial_times = np.append(custom_trial_times, np.nan)
 
             if trial_column_shape < num_trials and custom_trial_column != "InterTrial":
@@ -165,51 +167,71 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             )
 
         performance = session["performance"]
-        cue_parameters = performance.pop("cueParams")
-        cue_params_name = session["protocol"]["stimulusGenerator"]["function_handle"]["function"]
+        task_name = session["protocol"]["stimulusGenerator"]["function_handle"]["function"]
 
-        columns_to_skip = []
-        columns_to_indexed_array = []
-        columns_to_add = []
-        for column_name, column_value in cue_parameters[cue_params_name][0].items():
-            if isinstance(column_value, dict):
-                columns_to_skip.append(column_name)
-            elif isinstance(column_value, np.ndarray):
-                columns_to_indexed_array.append(column_name)
-            else:
-                columns_to_add.append(column_name)
+        trial_type_num_to_str = {1: "left", 2: "right"}
+        trial_type_data = np.squeeze(performance["trialType"].toarray()).astype(int)
+        trial_type_data = np.vectorize(trial_type_num_to_str.get)(trial_type_data)
+        nwbfile.add_trial_column(
+            name='trial_type',
+            description='Defines the correct side (left or right) for a given trial.',
+            data=trial_type_data,
+        )
 
-        # Add to trials table
-        for cue_column in columns_to_indexed_array:
-            to_indexed_array = []
-            for trial_ind in range(session["nTrials"]):
-                to_indexed_array.append(cue_parameters[cue_params_name][trial_ind][cue_column])
-            indexed_array, indexed_array_indices = create_indexed_array(to_indexed_array)
-            nwbfile.trials.add_column(
-                name=cue_column,
-                description=f"{cue_params_name} indexed cue parameter.",
-                data=indexed_array,
-                index=indexed_array_indices,
+        trial_choice_data = np.squeeze(performance["choice"].toarray()).astype(int)
+        trial_choice_data = np.vectorize(trial_type_num_to_str.get)(trial_choice_data)
+        nwbfile.add_trial_column(
+            name='choice',
+            description='Defines which side the animal chose (left or right) for a given trial.',
+            data=trial_choice_data,
+        )
+
+        stim_types_data = np.squeeze(performance["stimType"].toarray()).astype(int)
+        stim_stype_num_to_str = {1: "black", 2: "white"}
+        stim_types_data = np.vectorize(stim_stype_num_to_str.get)(stim_types_data)
+        description = "Defines the stimulus color (black or white) for a given trial."
+        if "towers" in task_name.lower():
+            description = "The stimulus color defaults to black for Towers task."
+        nwbfile.add_trial_column(
+            name='stimulus_type',
+            description=description,
+            data=stim_types_data,
+        )
+
+        cue_parameters = performance["cueParams"]
+        cue_parameter_names = list(cue_parameters[task_name][0].keys())
+        # salientside, distractorside are in trial_type
+        cue_parameter_names = [param for param in cue_parameter_names if param not in ["salientside", "distractorside"]]
+        for cue_parameter_name in cue_parameter_names:
+            data = [cue_parameters[task_name][trial_ind][cue_parameter_name] for trial_ind in range(num_trials)]
+            trials_column_kwargs = dict(
+                name=cue_parameter_name,
+                description=f"{task_name} cue parameter.",
+                data=data,
             )
 
-        for cue_column in columns_to_add:
-            data = [cue_parameters[cue_params_name][trial_ind][cue_column] for trial_ind in range(session["nTrials"])]
-            nwbfile.trials.add_column(name=cue_column, description=f"{cue_params_name} cue parameter.", data=data)
+            if isinstance(data[0], np.ndarray):
+                indexed_array, indexed_array_indices = create_indexed_array(data)
+                trials_column_kwargs.update(data=indexed_array, index=indexed_array_indices)
 
-        for performance_column, data in performance.items():
+            nwbfile.trials.add_column(**trials_column_kwargs)
+
+        additional_columns_to_add = [col for col in performance.keys() if col not in ["startTime", "trialTime", "trialType", "choice", "stimType", "cueParams"]]
+        for column_name in additional_columns_to_add:
+            data = performance[column_name]
             if isinstance(data, list):
                 data = np.array(data)
 
             if data.shape[0] == 0:
                 continue
 
-            if performance_column in nwbfile.trials.colnames:
+            if column_name in nwbfile.trials.colnames:
                 continue
 
             if isinstance(data, scipy.sparse._csc.csc_matrix):
                 data = np.squeeze(data.toarray())
             nwbfile.add_trial_column(
-                name=performance_column,
+                name=column_name,
                 description="A custom performance column.",
                 data=data,
             )
@@ -225,17 +247,15 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         if isinstance(licks, scipy.sparse._csc.csc_matrix):
             licks = np.squeeze(licks.toarray())
 
-        time_series = TimeSeries(
-            name="licks",
-            data=H5DataIO(licks, compression="gzip"),
-            timestamps=H5DataIO(timestamps, compression="gzip"),
-            description="no discription",
-            unit="a.u.",  # TODO confirm what is unit
-        )
+        if not np.any(licks):
+            return nwbfile
 
-        behavioral_events = BehavioralEvents(time_series=time_series, name="BehavioralEvents")
+        rising_frames = get_rising_frames_from_ttl(trace=licks)
+        lick_times = timestamps[rising_frames]
+
+        lick_events = Events(name="licks", description="The times of licks.", timestamps=lick_times)
         behavior = get_module(nwbfile, "behavior")
-        behavior.add(behavioral_events)
+        behavior.add(lick_events)
 
     def add_position(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
@@ -287,8 +307,6 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         )
 
         sensor_dots = session["sensordots"]
-        # not sure this is the right data type, will have to ask during meeting what is this
-        # also there is velocitygain
         sensor_dots_ts = TimeSeries(
             name="TimeSeriesSensorDots",
             data=H5DataIO(sensor_dots, compression="gzip"),

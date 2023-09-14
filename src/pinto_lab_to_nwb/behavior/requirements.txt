@@ -1,1 +1,3 @@
-ndx-pinto-metadata==0.1.0
+ndx-pinto-metadata==0.1.1
+ndx-events==0.2.0
+pymatreader==0.0.32
