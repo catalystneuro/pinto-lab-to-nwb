@@ -272,7 +272,11 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         if eye_tracking_ttl is not None:
             rising_frames = get_rising_frames_from_ttl(trace=eye_tracking_ttl)
             eye_tracking_times = timestamps[rising_frames]
-            eye_tracking_events = Events(name="eye_tracking_times", description="The times when the eye tracking camera was on.", timestamps=eye_tracking_times)
+            eye_tracking_events = Events(
+                name="eye_tracking_times",
+                description="The times when the eye tracking camera was on.",
+                timestamps=eye_tracking_times,
+            )
             behavior.add(eye_tracking_events)
 
         widefield_ttl = self._get_time_series("widefield")
@@ -282,7 +286,8 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             widefield_events = Events(
                 name="widefield_times",
                 description="The times when the widefield imaging was on.",
-                timestamps=widefield_times)
+                timestamps=widefield_times,
+            )
             behavior.add(widefield_events)
 
         two_photon_ttl = self._get_time_series("twop")
@@ -292,7 +297,8 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             two_photon_events = Events(
                 name="two_photon_times",
                 description="The times when the two photon imaging was on.",
-                timestamps=two_photon_times)
+                timestamps=two_photon_times,
+            )
             behavior.add(two_photon_events)
 
     def _get_time_series(self, series_name: str = "licks"):
@@ -307,7 +313,6 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             return
 
         return data
-
 
     def add_position(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
