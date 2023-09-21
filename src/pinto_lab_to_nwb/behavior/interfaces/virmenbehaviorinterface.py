@@ -145,7 +145,9 @@ class ViRMENBehaviorInterface(BaseDataInterface):
                 stop_time=trial_end_times_flatten[trial_ind],
             )
 
-        custom_trial_columns = [k for k in behavior_times.keys() if k not in ["StartOfTrial", "EndOfTrial", "EndOfExperiment"]]
+        custom_trial_columns = [
+            k for k in behavior_times.keys() if k not in ["StartOfTrial", "EndOfTrial", "EndOfExperiment"]
+        ]
         for custom_trial_column in custom_trial_columns:
             trial_column_shape = behavior_times[custom_trial_column].shape[0]
             if trial_column_shape == 0:
@@ -173,16 +175,16 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         trial_type_data = np.squeeze(performance["trialType"].toarray()).astype(int)
         trial_type_data = np.vectorize(trial_type_num_to_str.get)(trial_type_data)
         nwbfile.add_trial_column(
-            name='trial_type',
-            description='Defines the correct side (left or right) for a given trial.',
+            name="trial_type",
+            description="Defines the correct side (left or right) for a given trial.",
             data=trial_type_data,
         )
 
         trial_choice_data = np.squeeze(performance["choice"].toarray()).astype(int)
         trial_choice_data = np.vectorize(trial_type_num_to_str.get)(trial_choice_data)
         nwbfile.add_trial_column(
-            name='choice',
-            description='Defines which side the animal chose (left or right) for a given trial.',
+            name="choice",
+            description="Defines which side the animal chose (left or right) for a given trial.",
             data=trial_choice_data,
         )
 
@@ -193,7 +195,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         if "towers" in task_name.lower():
             description = "The stimulus color defaults to black for Towers task."
         nwbfile.add_trial_column(
-            name='stimulus_type',
+            name="stimulus_type",
             description=description,
             data=stim_types_data,
         )
@@ -216,7 +218,11 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
             nwbfile.trials.add_column(**trials_column_kwargs)
 
-        additional_columns_to_add = [col for col in performance.keys() if col not in ["startTime", "trialTime", "trialType", "choice", "stimType", "cueParams"]]
+        additional_columns_to_add = [
+            col
+            for col in performance.keys()
+            if col not in ["startTime", "trialTime", "trialType", "choice", "stimType", "cueParams"]
+        ]
         for column_name in additional_columns_to_add:
             data = performance[column_name]
             if isinstance(data, list):
