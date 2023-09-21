@@ -239,23 +239,69 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         return nwbfile
 
     def add_events(self, nwbfile: NWBFile):
-        licks = self._mat_dict["session"]["licks"]
-        timestamps = np.squeeze(self._mat_dict["session"]["timestamps"].toarray())
-        if licks.shape[0] == 0:
-            return nwbfile
-
-        if isinstance(licks, scipy.sparse._csc.csc_matrix):
-            licks = np.squeeze(licks.toarray())
-
-        if not np.any(licks):
-            return nwbfile
-
-        rising_frames = get_rising_frames_from_ttl(trace=licks)
-        lick_times = timestamps[rising_frames]
-
-        lick_events = Events(name="licks", description="The times of licks.", timestamps=lick_times)
         behavior = get_module(nwbfile, "behavior")
-        behavior.add(lick_events)
+        timestamps = np.squeeze(self._mat_dict["session"]["timestamps"].toarray())
+        licks = self._get_time_series(series_name="licks")
+        if licks is not None:
+            licks_time_series = TimeSeries(
+                name="licks",
+                data=H5DataIO(licks, compression="gzip"),
+                timestamps=H5DataIO(timestamps, compression="gzip"),
+                description="The lick response measured over time.",
+                unit="a.u.",  # TODO confirm what is unit
+            )
+            behavior.add(licks_time_series)
+        opto_voltage = self._get_time_series("optoVoltageOut")
+        if opto_voltage is not None:
+            opto_voltage_time_series = TimeSeries(
+                name="opto_voltage",
+                data=H5DataIO(opto_voltage, compression="gzip"),
+                timestamps=H5DataIO(timestamps, compression="gzip"),
+                description="The voltage passed to the opto LED.",
+                unit="Volts",
+            )
+            behavior.add(opto_voltage_time_series)
+
+        eye_tracking_ttl = self._get_time_series("eyeCam")
+        if eye_tracking_ttl is not None:
+            rising_frames = get_rising_frames_from_ttl(trace=eye_tracking_ttl)
+            eye_tracking_times = timestamps[rising_frames]
+            eye_tracking_events = Events(name="eye_tracking_times", description="The times when the eye tracking camera was on.", timestamps=eye_tracking_times)
+            behavior.add(eye_tracking_events)
+
+        widefield_ttl = self._get_time_series("widefield")
+        if widefield_ttl is not None:
+            rising_frames = get_rising_frames_from_ttl(trace=widefield_ttl)
+            widefield_times = timestamps[rising_frames]
+            widefield_events = Events(
+                name="widefield_times",
+                description="The times when the widefield imaging was on.",
+                timestamps=widefield_times)
+            behavior.add(widefield_events)
+
+        two_photon_ttl = self._get_time_series("twop")
+        if two_photon_ttl is not None:
+            rising_frames = get_rising_frames_from_ttl(trace=two_photon_ttl)
+            two_photon_times = timestamps[rising_frames]
+            two_photon_events = Events(
+                name="two_photon_times",
+                description="The times when the two photon imaging was on.",
+                timestamps=two_photon_times)
+            behavior.add(two_photon_events)
+
+    def _get_time_series(self, series_name: str = "licks"):
+        if series_name not in self._mat_dict["session"]:
+            return
+
+        data = self._mat_dict["session"][series_name]
+        if isinstance(data, scipy.sparse._csc.csc_matrix):
+            data = np.squeeze(data.toarray())
+
+        if not np.any(data):
+            return
+
+        return data
+
 
     def add_position(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
