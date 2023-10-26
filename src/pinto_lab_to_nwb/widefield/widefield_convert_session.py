@@ -1,6 +1,8 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 import re
 from pathlib import Path
+
+import numpy as np
 from dateutil import tz
 from neuroconv.utils import (
     load_dict_from_file,
@@ -8,6 +10,7 @@ from neuroconv.utils import (
     FolderPathType,
     FilePathType,
 )
+from pynwb import NWBHDF5IO
 
 from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
 
@@ -15,6 +18,9 @@ from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
 def session_to_nwb(
     nwbfile_path: FilePathType,
     widefield_imaging_folder_path: FolderPathType,
+    strobe_sequence_file_path: FilePathType,
+    processed_imaging_file_path: FilePathType,
+    info_file_path: FilePathType,
     stub_test: bool = False,
 ):
     """
@@ -26,6 +32,8 @@ def session_to_nwb(
         The file path to the NWB file that will be created.
     widefield_imaging_folder_path: FolderPathType
         The folder path that contains the Micro-Manager OME-TIF imaging output (.ome.tif files).
+    strobe_sequence_file_path: FilePathType
+            The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -35,9 +43,59 @@ def session_to_nwb(
     conversion_options = dict()
 
     # Add Imaging
-    imaging_source_data = dict(folder_path=str(widefield_imaging_folder_path))
-    source_data.update(dict(Imaging=imaging_source_data))
-    conversion_options.update(dict(Imaging=dict(stub_test=stub_test)))
+    imaging_blue_source_data = dict(
+        folder_path=str(widefield_imaging_folder_path),
+        strobe_sequence_file_path=str(strobe_sequence_file_path),
+        channel_name="blue",
+    )
+    imaging_violet_source_data = dict(
+        folder_path=str(widefield_imaging_folder_path),
+        strobe_sequence_file_path=str(strobe_sequence_file_path),
+        channel_name="violet",
+    )
+
+    source_data.update(dict(ImagingBlue=imaging_blue_source_data, ImagingViolet=imaging_violet_source_data))
+
+    conversion_options.update(
+        dict(
+            ImagingBlue=dict(stub_test=stub_test, photon_series_index=0, photon_series_type="OnePhotonSeries"),
+            ImagingViolet=dict(stub_test=stub_test, photon_series_index=1, photon_series_type="OnePhotonSeries"),
+        ),
+    )
+
+    # Add processed imaging
+    source_data.update(
+        dict(
+            ProcessedImagingBlue=dict(
+                file_path=str(processed_imaging_file_path),
+                info_file_path=str(info_file_path),
+                strobe_sequence_file_path=str(strobe_sequence_file_path),
+                channel_name="blue",
+            )
+        ),
+        ProcessedImagingViolet=dict(
+            file_path=str(processed_imaging_file_path),
+            info_file_path=str(info_file_path),
+            strobe_sequence_file_path=str(strobe_sequence_file_path),
+            channel_name="violet",
+        ),
+    )
+    conversion_options.update(
+        dict(
+            ProcessedImagingBlue=dict(
+                stub_test=stub_test,
+                parent_container="processing/ophys",
+                photon_series_type="OnePhotonSeries",
+                photon_series_index=2,
+            ),
+            ProcessedImagingViolet=dict(
+                stub_test=stub_test,
+                parent_container="processing/ophys",
+                photon_series_type="OnePhotonSeries",
+                photon_series_index=3,
+            ),
+        ),
+    )
 
     converter = WideFieldNWBConverter(source_data=source_data)
 
@@ -70,12 +128,19 @@ def session_to_nwb(
 
 if __name__ == "__main__":
     # Parameters for conversion
-    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/TS12_20220407_20hz_noteasy_1")
-    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/TS12_20220407_20hz_noteasy_1.nwb")
+    imaging_folder_path = Path("/Users/weian/data/DrChicken_20230419_20hz")
+    strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
+    processed_imaging_path = imaging_folder_path / "rawf_full.mat"
+    info_file_path = imaging_folder_path / "info.mat"
+    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/stub_DrChicken_20230419_20hz.nwb")
+
     stub_test = False
 
     session_to_nwb(
         nwbfile_path=nwbfile_path,
         widefield_imaging_folder_path=imaging_folder_path,
+        strobe_sequence_file_path=strobe_sequence_file_path,
+        processed_imaging_file_path=processed_imaging_path,
+        info_file_path=info_file_path,
         stub_test=stub_test,
     )
