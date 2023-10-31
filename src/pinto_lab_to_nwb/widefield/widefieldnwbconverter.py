@@ -5,6 +5,7 @@ from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldImagingInterface,
     WidefieldProcessedImagingInterface,
     WidefieldProcessedSegmentationinterface,
+    WidefieldSummaryImagesBlueInterface
 )
 
 
@@ -16,5 +17,6 @@ class WideFieldNWBConverter(NWBConverter):
         ImagingViolet=WidefieldImagingInterface,
         ProcessedImagingBlue=WidefieldProcessedImagingInterface,
         ProcessedImagingViolet=WidefieldProcessedImagingInterface,
-        SegmentationBlue=WidefieldProcessedSegmentationinterface,
+        SummaryImagesBlue=WidefieldSummaryImagesBlueInterface,
+        SegmentationProcessedBlue=WidefieldProcessedSegmentationinterface,
     )

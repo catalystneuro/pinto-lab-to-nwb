@@ -97,13 +97,16 @@ def session_to_nwb(
         ),
     )
 
-    # Add segmentation for the downsampled imaging data (blue channel)
+    # Add segmentation and summary images for the blue and violet channels
     source_data.update(
         dict(
-            SegmentationBlue=dict(
+            SegmentationProcessedBlue=dict(
                 folder_path=str(widefield_imaging_folder_path),
-            )
-        ),
+            ),
+            SummaryImagesBlue=dict(
+                folder_path=str(widefield_imaging_folder_path),
+            ),
+        )
     )
 
     converter = WideFieldNWBConverter(source_data=source_data)
@@ -143,7 +146,7 @@ if __name__ == "__main__":
     info_file_path = imaging_folder_path / "info.mat"
     nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/stub_DrChicken_20230419_20hz.nwb")
 
-    stub_test = False
+    stub_test = True
 
     session_to_nwb(
         nwbfile_path=nwbfile_path,
