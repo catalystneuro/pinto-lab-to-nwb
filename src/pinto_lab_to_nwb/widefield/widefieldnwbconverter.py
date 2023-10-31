@@ -1,7 +1,11 @@
 """Primary NWBConverter class for this dataset."""
 from neuroconv import NWBConverter
 
-from pinto_lab_to_nwb.widefield.interfaces import WidefieldImagingInterface, WidefieldProcessedImagingInterface
+from pinto_lab_to_nwb.widefield.interfaces import (
+    WidefieldImagingInterface,
+    WidefieldProcessedImagingInterface,
+    WidefieldProcessedSegmentationinterface,
+)
 
 
 class WideFieldNWBConverter(NWBConverter):
@@ -12,4 +16,5 @@ class WideFieldNWBConverter(NWBConverter):
         ImagingViolet=WidefieldImagingInterface,
         ProcessedImagingBlue=WidefieldProcessedImagingInterface,
         ProcessedImagingViolet=WidefieldProcessedImagingInterface,
+        SegmentationBlue=WidefieldProcessedSegmentationinterface,
     )

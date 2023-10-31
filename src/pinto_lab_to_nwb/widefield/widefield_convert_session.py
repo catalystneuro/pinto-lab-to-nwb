@@ -97,6 +97,15 @@ def session_to_nwb(
         ),
     )
 
+    # Add segmentation for the downsampled imaging data (blue channel)
+    source_data.update(
+        dict(
+            SegmentationBlue=dict(
+                folder_path=str(widefield_imaging_folder_path),
+            )
+        ),
+    )
+
     converter = WideFieldNWBConverter(source_data=source_data)
 
     # Add datetime to conversion
