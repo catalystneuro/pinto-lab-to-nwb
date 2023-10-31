@@ -6,7 +6,7 @@ from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldProcessedImagingInterface,
     WidefieldProcessedSegmentationinterface,
     WidefieldSegmentationImagesBlueInterface,
-    WidefieldSegmentationImagesVioletInterface
+    WidefieldSegmentationImagesVioletInterface,
 )
 
 

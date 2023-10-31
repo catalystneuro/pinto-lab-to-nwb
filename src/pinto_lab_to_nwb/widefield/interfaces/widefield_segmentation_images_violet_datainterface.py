@@ -30,7 +30,9 @@ class WidefieldSegmentationImagesVioletInterface(BaseDataInterface):
 
     def _load_pca_mask(self) -> np.ndarray:
         pca_mask_file_path = self.folder_path / "violet_pca_vasculature_mask_2.mat"
-        assert pca_mask_file_path.exists(), f"The PCA mask file for the violet channel is missing from {self.folder_path}."
+        assert (
+            pca_mask_file_path.exists()
+        ), f"The PCA mask file for the violet channel is missing from {self.folder_path}."
         pca_mask_violet = read_mat(str(pca_mask_file_path))
         assert "vasc_mask" in pca_mask_violet, f"Could not find 'vasc_mask' in 'violet_pca_vasculature_mask_2.mat'."
         pca_mask = pca_mask_violet["vasc_mask"]
@@ -44,9 +46,7 @@ class WidefieldSegmentationImagesVioletInterface(BaseDataInterface):
         if images_container_name in ophys.data_interfaces:
             raise ValueError(f"Images container {images_container_name} already exists in the NWBFile.")
 
-        description = (
-            "Contains the PCA mask for the violet channel on the binned session image."
-        )
+        description = "Contains the PCA mask for the violet channel on the binned session image."
         images_container = Images(
             name=images_container_name,
             description=description,
@@ -54,4 +54,8 @@ class WidefieldSegmentationImagesVioletInterface(BaseDataInterface):
         ophys.add(images_container)
 
         pca_image_data = self._image_pca_violet.T
-        images_container.add_image(GrayscaleImage(name="pca_violet", description="The PCA based mask for the violet channel.", data=pca_image_data))
+        images_container.add_image(
+            GrayscaleImage(
+                name="pca_violet", description="The PCA based mask for the violet channel.", data=pca_image_data
+            )
+        )

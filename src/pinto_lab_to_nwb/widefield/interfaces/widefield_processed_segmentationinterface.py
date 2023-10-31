@@ -42,8 +42,10 @@ class WidefieldProcessedSegmentationinterface(BaseSegmentationExtractorInterface
         summary_images_metadata.update(
             name=images_container_name,
             description="The segmentation images for the downsampled imaging data.",
-            images=[dict(name="vasculature", description="The contrast based vasculature mask for the blue channel."),
-                    dict(name="pca_blue", description="The PCA based mask for the blue channel.")]
+            images=[
+                dict(name="vasculature", description="The contrast based vasculature mask for the blue channel."),
+                dict(name="pca_blue", description="The PCA based mask for the blue channel."),
+            ],
         )
 
         return metadata
@@ -78,7 +80,9 @@ class WidefieldProcessedSegmentationinterface(BaseSegmentationExtractorInterface
         image_segmentation = ophys.get("ImageSegmentation")
         plane_segmentation = image_segmentation.plane_segmentations[plane_segmentation_name]
         locations = self.segmentation_extractor._roi_labels
-        assert len(plane_segmentation.id) == len(locations), "The number of ROIs does not match the number of Allen area labels."
+        assert len(plane_segmentation.id) == len(
+            locations
+        ), "The number of ROIs does not match the number of Allen area labels."
         plane_segmentation.add_column(
             name="location",
             description="The Allen area labels for each ROI.",

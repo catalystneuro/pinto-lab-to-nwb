@@ -14,8 +14,8 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
     mode = "file"
 
     def __init__(
-            self,
-            folder_path: FolderPathType,
+        self,
+        folder_path: FolderPathType,
     ):
         """
         The SegmentationExtractor for the downsampled (binned) Widefield imaging data.
@@ -41,12 +41,20 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
 
         self.folder_path = Path(folder_path)
 
-        expected_files = ["info.mat", "ROIfromRef.mat", "vasculature_mask_2.mat", "blue_pca_vasculature_mask_2.mat", "violet_pca_vasculature_mask_2.mat"]
+        expected_files = [
+            "info.mat",
+            "ROIfromRef.mat",
+            "vasculature_mask_2.mat",
+            "blue_pca_vasculature_mask_2.mat",
+            "violet_pca_vasculature_mask_2.mat",
+        ]
         mat_file_paths = list(self.folder_path.glob("*.mat"))
         assert mat_file_paths, f"The .mat files are missing from {folder_path}."
         # assert all expected files are in the folder_path
         for expected_file in expected_files:
-            assert (self.folder_path / expected_file).exists(), f"The file {expected_file} is missing from {folder_path}."
+            assert (
+                self.folder_path / expected_file
+            ).exists(), f"The file {expected_file} is missing from {folder_path}."
 
         info_mat = read_mat(self.folder_path / "info.mat")
         assert "info" in info_mat, f"Could not find 'info' struct in 'info.mat'."
@@ -55,13 +63,15 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
 
         roi_mat = read_mat(self.folder_path / "ROIfromRef.mat")
         assert "ROIcentroids" in roi_mat, f"Could not find 'ROIcentroids' in 'ROIfromRef.mat'."
-        self._roi_locations = roi_mat["ROIcentroids"].T  # they should be in height x width (orig they are width x height)
+        self._roi_locations = roi_mat[
+            "ROIcentroids"
+        ].T  # they should be in height x width (orig they are width x height)
         # Allen area locations
         assert "ROIlbl" in roi_mat, f"Could not find 'ROIlbl' in 'ROIfromRef.mat'."
         self._roi_labels = roi_mat["ROIlbl"]
 
-        binned_height = int(info_mat["info"]["height"] / roi_mat['dsFactor'])
-        binned_width = int(info_mat["info"]["width"] / roi_mat['dsFactor'])
+        binned_height = int(info_mat["info"]["height"] / roi_mat["dsFactor"])
+        binned_width = int(info_mat["info"]["width"] / roi_mat["dsFactor"])
         self._image_size = (binned_height, binned_width)
 
         assert "ROI" in roi_mat, f"Could not find 'ROI' in 'ROIfromRef.mat'."
@@ -105,8 +115,7 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
         return self._roi_locations
 
     def get_images_dict(self):
-        """Return the images dict that contain the contrast based vasculature mask and the PCA mask for the blue channel.
-        """
+        """Return the images dict that contain the contrast based vasculature mask and the PCA mask for the blue channel."""
         images_dict = super().get_images_dict()
         images_dict.update(
             vasculature=self._image_vasculature,

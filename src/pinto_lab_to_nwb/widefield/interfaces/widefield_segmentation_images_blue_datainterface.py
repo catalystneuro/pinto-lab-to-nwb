@@ -48,16 +48,13 @@ class WidefieldSegmentationImagesBlueInterface(BaseDataInterface):
         return manual_mask
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
-
         ophys = get_module(nwbfile=nwbfile, name="ophys")
 
         images_container_name = "SegmentationImagesBlue"
         if images_container_name in ophys.data_interfaces:
             raise ValueError(f"Images container {images_container_name} already exists in the NWBFile.")
 
-        description = (
-            "Contains the manual mask and the contrast based vasculature mask for the blue channel in the full size session image."
-        )
+        description = "Contains the manual mask and the contrast based vasculature mask for the blue channel in the full size session image."
         images_container = Images(
             name=images_container_name,
             description=description,
@@ -65,7 +62,15 @@ class WidefieldSegmentationImagesBlueInterface(BaseDataInterface):
         ophys.add(images_container)
 
         vasculature_image_data = self._image_vasculature.T
-        images_container.add_image(GrayscaleImage(name="vasculature", description="The contrast based vasculature mask for the blue channel.", data=vasculature_image_data))
+        images_container.add_image(
+            GrayscaleImage(
+                name="vasculature",
+                description="The contrast based vasculature mask for the blue channel.",
+                data=vasculature_image_data,
+            )
+        )
 
         manual_mask_data = self._image_manual.T
-        images_container.add_image(GrayscaleImage(name="manual", description="The manual mask for the blue channel.", data=manual_mask_data))
+        images_container.add_image(
+            GrayscaleImage(name="manual", description="The manual mask for the blue channel.", data=manual_mask_data)
+        )
