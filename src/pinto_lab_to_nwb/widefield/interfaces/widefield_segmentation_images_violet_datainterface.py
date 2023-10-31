@@ -1,10 +1,9 @@
-from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
 from neuroconv import BaseDataInterface
 from neuroconv.tools import get_module
-from neuroconv.utils import FolderPathType, dict_deep_update
+from neuroconv.utils import FolderPathType
 from pymatreader import read_mat
 from pynwb import NWBFile
 from pynwb.base import Images
