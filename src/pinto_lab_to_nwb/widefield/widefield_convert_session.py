@@ -106,6 +106,9 @@ def session_to_nwb(
             SummaryImagesBlue=dict(
                 folder_path=str(widefield_imaging_folder_path),
             ),
+            SummaryImagesViolet=dict(
+                folder_path=str(widefield_imaging_folder_path),
+            ),
         )
     )
 
