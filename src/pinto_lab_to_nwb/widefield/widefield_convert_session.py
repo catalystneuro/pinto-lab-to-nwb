@@ -2,7 +2,6 @@
 import re
 from pathlib import Path
 
-import numpy as np
 from dateutil import tz
 from neuroconv.utils import (
     load_dict_from_file,
@@ -10,7 +9,6 @@ from neuroconv.utils import (
     FolderPathType,
     FilePathType,
 )
-from pynwb import NWBHDF5IO
 
 from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
 
@@ -34,6 +32,8 @@ def session_to_nwb(
         The folder path that contains the Micro-Manager OME-TIF imaging output (.ome.tif files).
     strobe_sequence_file_path: FilePathType
             The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
+    info_file_path: FilePathType
+        The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -143,13 +143,19 @@ def session_to_nwb(
 
 if __name__ == "__main__":
     # Parameters for conversion
-    imaging_folder_path = Path("/Users/weian/data/DrChicken_20230419_20hz")
-    strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
-    processed_imaging_path = imaging_folder_path / "rawf_full.mat"
-    info_file_path = imaging_folder_path / "info.mat"
-    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/stub_DrChicken_20230419_20hz.nwb")
 
-    stub_test = True
+    # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
+    imaging_folder_path = Path("/Users/weian/data/DrChicken_20230419_20hz")
+    # The file path to the strobe sequence file.
+    strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
+    # The file path to the downsampled imaging data in Matlab format (.mat file).
+    processed_imaging_path = imaging_folder_path / "rawf_full.mat"
+    # The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
+    info_file_path = imaging_folder_path / "info.mat"
+    # The file path to the NWB file that will be created.
+    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/DrChicken_20230419_20hz.nwb")
+
+    stub_test = False
 
     session_to_nwb(
         nwbfile_path=nwbfile_path,
