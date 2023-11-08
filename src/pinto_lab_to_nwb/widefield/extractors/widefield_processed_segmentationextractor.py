@@ -46,7 +46,6 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
             "ROIfromRef.mat",
             "vasculature_mask_2.mat",
             "blue_pca_vasculature_mask_2.mat",
-            "violet_pca_vasculature_mask_2.mat",
         ]
         mat_file_paths = list(self.folder_path.glob("*.mat"))
         assert mat_file_paths, f"The .mat files are missing from {folder_path}."
@@ -87,11 +86,6 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
         pca_mask_blue = read_mat(self.folder_path / f"blue_pca_vasculature_mask_2.mat")
         assert "mask" in pca_mask_blue, f"Could not find 'mask' in 'blue_pca_vasculature_mask_2.mat'."
         self._image_pca_blue = pca_mask_blue["mask"]
-
-        # This could be added from the converter
-        # pca_mask_violet = read_mat(self.folder_path / f"violet_pca_vasculature_mask_2.mat")
-        # assert "vasc_mask" in pca_mask_violet, f"Could not find 'vasc_mask' in 'violet_pca_vasculature_mask_2.mat'."
-        # self._image_pca_violet = pca_mask_violet["vasc_mask"]
 
     def _compute_image_masks(self, pixel_mask):
         """Compute the image masks from the ROI's pixel locations."""
