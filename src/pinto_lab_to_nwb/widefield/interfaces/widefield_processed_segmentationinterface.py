@@ -41,7 +41,7 @@ class WidefieldProcessedSegmentationinterface(BaseSegmentationExtractorInterface
         images_container_name = "SegmentationImagesProcessedBlue"
         summary_images_metadata.update(
             name=images_container_name,
-            description="The segmentation images for the downsampled imaging data.",
+            description="Contains the contrast based vasculature mask and the PCA based mask for the blue channel.",
             images=[
                 dict(name="vasculature", description="The contrast based vasculature mask for the blue channel."),
                 dict(name="pca_blue", description="The PCA based mask for the blue channel."),

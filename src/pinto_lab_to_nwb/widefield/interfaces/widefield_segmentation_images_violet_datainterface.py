@@ -42,7 +42,7 @@ class WidefieldSegmentationImagesVioletInterface(BaseDataInterface):
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
         ophys = get_module(nwbfile=nwbfile, name="ophys")
 
-        images_container_name = "SegmentationImagesViolet"
+        images_container_name = "SegmentationImagesProcessedViolet"
         if images_container_name in ophys.data_interfaces:
             raise ValueError(f"Images container {images_container_name} already exists in the NWBFile.")
 
