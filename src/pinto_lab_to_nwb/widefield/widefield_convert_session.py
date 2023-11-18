@@ -1,6 +1,7 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 import re
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from dateutil import tz
@@ -12,6 +13,7 @@ from neuroconv.utils import (
 )
 from pynwb import NWBHDF5IO
 
+from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
 
 
@@ -21,6 +23,7 @@ def session_to_nwb(
     strobe_sequence_file_path: FilePathType,
     processed_imaging_file_path: FilePathType,
     info_file_path: FilePathType,
+    subject_metadata_file_path: Optional[FilePathType] = None,
     stub_test: bool = False,
 ):
     """
@@ -34,6 +37,8 @@ def session_to_nwb(
         The folder path that contains the Micro-Manager OME-TIF imaging output (.ome.tif files).
     strobe_sequence_file_path: FilePathType
             The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
+    subject_metadata_file_path: FilePathType, optional
+        The file path to the subject metadata file. This file should contain the 'metadata' key.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -120,6 +125,10 @@ def session_to_nwb(
         metadata["NWBFile"].update(session_id=groups_dict["session_id"].replace("_", "-"))
         metadata["Subject"].update(subject_id=groups_dict["subject_id"])
 
+        if subject_metadata_file_path:
+            subject_metadata = make_subject_metadata(subject_id=groups_dict["subject_id"], subject_metadata_file_path=subject_metadata_file_path)
+            metadata = dict_deep_update(metadata, subject_metadata)
+
     # Run conversion
     converter.run_conversion(
         nwbfile_path=nwbfile_path, metadata=metadata, overwrite=True, conversion_options=conversion_options
@@ -132,6 +141,7 @@ if __name__ == "__main__":
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
     processed_imaging_path = imaging_folder_path / "rawf_full.mat"
     info_file_path = imaging_folder_path / "info.mat"
+    subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
     nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/stub_DrChicken_20230419_20hz.nwb")
 
     stub_test = False
@@ -142,5 +152,6 @@ if __name__ == "__main__":
         strobe_sequence_file_path=strobe_sequence_file_path,
         processed_imaging_file_path=processed_imaging_path,
         info_file_path=info_file_path,
+        subject_metadata_file_path=subject_metadata_file_path,
         stub_test=stub_test,
     )
