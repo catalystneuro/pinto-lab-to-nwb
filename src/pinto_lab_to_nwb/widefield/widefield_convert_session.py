@@ -126,7 +126,9 @@ def session_to_nwb(
         metadata["Subject"].update(subject_id=groups_dict["subject_id"])
 
         if subject_metadata_file_path:
-            subject_metadata = make_subject_metadata(subject_id=groups_dict["subject_id"], subject_metadata_file_path=subject_metadata_file_path)
+            subject_metadata = make_subject_metadata(
+                subject_id=groups_dict["subject_id"], subject_metadata_file_path=subject_metadata_file_path
+            )
             metadata = dict_deep_update(metadata, subject_metadata)
 
     # Run conversion

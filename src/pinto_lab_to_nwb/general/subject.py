@@ -12,12 +12,14 @@ def make_subject_metadata(subject_id: str, subject_metadata_file_path: str) -> d
     subject_metadata = subject_mat["metadata"]
 
     if subject_id not in subject_metadata["subject_nickname"]:
-        warn(f"Subject '{subject_id}' not found in subject metadata file '{subject_metadata_file_path}'."
-             f"The metadata for this subject will not be added to the NWB file.")
+        warn(
+            f"Subject '{subject_id}' not found in subject metadata file '{subject_metadata_file_path}'."
+            f"The metadata for this subject will not be added to the NWB file."
+        )
         return dict()
 
     subject_ind = subject_metadata["subject_nickname"].index(subject_id)
-    date_of_birth = datetime.strptime(subject_metadata["dob"][subject_ind], '%Y-%m-%d')
+    date_of_birth = datetime.strptime(subject_metadata["dob"][subject_ind], "%Y-%m-%d")
     tzinfo = tz.gettz("US/Pacific")
     date_of_birth = date_of_birth.replace(tzinfo=tzinfo)
 
