@@ -22,12 +22,12 @@ def make_subject_metadata(subject_id: str, subject_metadata_file_path: str) -> d
     date_of_birth = date_of_birth.replace(tzinfo=tzinfo)
 
     sex_mapping = dict(Male="M", Female="F")
+    # TODO: ear_tag_id, and zygosity are in the metadata file, but would require an extension of Subject to add, should it be added?
     subject_kwargs = dict(
         date_of_birth=date_of_birth,
         subject_id=subject_id,
         sex=sex_mapping[subject_metadata["sex"][subject_ind]],
         genotype=subject_metadata["line"][subject_ind],
-        species="Mus musculus",
     )
     subject_description = subject_metadata["subject_description"][subject_ind]
     if subject_description:
