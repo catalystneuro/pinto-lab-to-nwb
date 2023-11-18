@@ -19,8 +19,7 @@ def load_motion_correction_data(file_paths: List[str]) -> np.ndarray:
     motion_correction_data: numpy.ndarray
         The concatenated yx shifts from all the files.
     """
-    motion_correction_data = np.concatenate(
-        [get_yx_shifts(file_path=str(file)) for file in file_paths], axis=0)
+    motion_correction_data = np.concatenate([get_yx_shifts(file_path=str(file)) for file in file_paths], axis=0)
     return motion_correction_data
 
 

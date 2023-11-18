@@ -39,7 +39,9 @@ class WideFieldNWBConverter(NWBConverter):
         for interface_name in interface_names:
             channel_name = interface_name.replace("Imaging", "")
             motion_correction_series_name = f"MotionCorrectionSeries{channel_name}"
-            assert motion_correction_series_name not in nwbfile.acquisition, (f"Motion correction series '{motion_correction_series_name}' already exists in NWBFile.")
+            assert (
+                motion_correction_series_name not in nwbfile.acquisition
+            ), f"Motion correction series '{motion_correction_series_name}' already exists in NWBFile."
             imaging_interface = self.data_interface_objects[interface_name]
             frame_indices = imaging_interface.imaging_extractor.frame_indices
 
@@ -51,8 +53,9 @@ class WideFieldNWBConverter(NWBConverter):
                         num_frames = 100
                         motion_correction = motion_correction[:num_frames, :]
 
-            assert motion_correction.shape[
-                       0] == num_frames, f"The number of frames for motion correction ({motion_correction.shape[0]}) does not match the number of frames ({num_frames}) from the {interface_name} imaging interface."
+            assert (
+                motion_correction.shape[0] == num_frames
+            ), f"The number of frames for motion correction ({motion_correction.shape[0]}) does not match the number of frames ({num_frames}) from the {interface_name} imaging interface."
 
             one_photon_series = nwbfile.acquisition[f"OnePhotonSeries{channel_name}"]
             yx_time_series = TimeSeries(
