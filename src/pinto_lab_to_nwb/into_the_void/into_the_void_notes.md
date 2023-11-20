@@ -66,3 +66,15 @@ If the default mapping has to be adjusted, the user can provide a custom mapping
 imaging_to_segmentation_plane_map = {'Ch1': 'Chan2Plane0', 'Ch2': 'Chan1Plane0'}
 ```
 where "Ch2" will use the first channel provided in the segmentation output from Suite2p, and "Ch1" will use the second channel provided in the segmentation output from Suite2p.
+
+### Example usage
+
+To run a specific conversion, you might need to install first some conversion specific dependencies that are located in each conversion directory:
+```
+cd src/pinto_lab_to_nwb/into_the_void
+pip install -r into_the_void_requirements.txt
+```
+Then you can run a specific conversion with the following command:
+```
+python into_the_void_convert_session.py
+```

@@ -81,8 +81,12 @@ if __name__ == "__main__":
     imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/NCCR32_2022_11_03_IntoTheVoid_t_series-005")
     # The folder that contains the Suite2P segmentation output.
     segmentation_folder_path = imaging_folder_path / "suite2p"
+    # The folder path that will contain the NWB files.
     nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
+    # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     stub_test = True
+
+    # The file path to the NWB file that will be created.
     nwbfile_name = imaging_folder_path.name + ".nwb" if not stub_test else "stub_" + imaging_folder_path.name + ".nwb"
     nwbfile_path = nwbfile_folder_path / nwbfile_name
 
