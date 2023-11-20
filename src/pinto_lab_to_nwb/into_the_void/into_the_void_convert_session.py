@@ -86,7 +86,6 @@ if __name__ == "__main__":
     nwbfile_name = imaging_folder_path.name + ".nwb" if not stub_test else "stub_" + imaging_folder_path.name + ".nwb"
     nwbfile_path = nwbfile_folder_path / nwbfile_name
 
-
     # Provide a mapping between the imaging and segmentation planes
     # The default mapping is to rely on the order of the planes in the imaging and segmentation folders
     # The keys of the dictionary are the imaging plane names and the values are the segmentation plane names

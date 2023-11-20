@@ -10,7 +10,9 @@ from neuroconv.tools.nwb_helpers import get_default_nwbfile_metadata
 from neuroconv.utils import DeepDict, dict_deep_update, FolderPathType
 
 
-def get_default_imaging_to_segmentation_name_mapping(imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType) -> dict or None:
+def get_default_imaging_to_segmentation_name_mapping(
+    imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
+) -> dict or None:
     """
     Get the default mapping between imaging and segmentation planes.
 
@@ -34,8 +36,9 @@ def get_default_imaging_to_segmentation_name_mapping(imaging_folder_path: Folder
 
     plane_default_mapping = dict()
     for channel_name, mapped_channel_name in zip(streams["channel_streams"], available_channels):
-        mapped_values = [f"{mapped_channel_name.capitalize()}{plane_name.capitalize()}" for plane_name in
-                         available_planes]
+        mapped_values = [
+            f"{mapped_channel_name.capitalize()}{plane_name.capitalize()}" for plane_name in available_planes
+        ]
         if len(available_planes) > 1:
             plane_default_mapping.update(dict(zip(streams["plane_streams"][channel_name], mapped_values)))
         else:
@@ -48,11 +51,11 @@ class IntoTheVoidNWBConverter(NWBConverter):
     """Primary conversion class for the Two Photon Imaging (Bruker experiment)."""
 
     def __init__(
-            self,
-            imaging_folder_path: FolderPathType,
-            verbose: bool = False,
-            segmentation_folder_path: Optional[FolderPathType] = None,
-            imaging_to_segmentation_plane_map: dict = None,
+        self,
+        imaging_folder_path: FolderPathType,
+        verbose: bool = False,
+        segmentation_folder_path: Optional[FolderPathType] = None,
+        imaging_to_segmentation_plane_map: dict = None,
     ):
         self.verbose = verbose
         self.data_interface_objects = dict()
@@ -81,7 +84,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
 
         if segmentation_folder_path:
             available_planes = Suite2pSegmentationInterface.get_available_planes(folder_path=segmentation_folder_path)
-            available_channels = Suite2pSegmentationInterface.get_available_channels(folder_path=segmentation_folder_path)
+            available_channels = Suite2pSegmentationInterface.get_available_channels(
+                folder_path=segmentation_folder_path
+            )
             # Add first channel
             for plane_name in available_planes:
                 for channel_name in available_channels:
@@ -94,7 +99,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
                             verbose=verbose,
                         )
                         traces_to_add = interface.segmentation_extractor.get_traces_dict()
-                        any_has_traces = any([bool(trace.size) for trace_name, trace in traces_to_add.items() if trace is not None])
+                        any_has_traces = any(
+                            [bool(trace.size) for trace_name, trace in traces_to_add.items() if trace is not None]
+                        )
                         if not any_has_traces:
                             continue
 
@@ -128,8 +135,10 @@ class IntoTheVoidNWBConverter(NWBConverter):
                 None,
             )
             if imaging_plane_name is None:
-                warn("Could not determine the name of the imaging plane to automatically update the segmentation metadata with."
-                     "Please manually update the links in the metadata.")
+                warn(
+                    "Could not determine the name of the imaging plane to automatically update the segmentation metadata with."
+                    "Please manually update the links in the metadata."
+                )
                 return super().get_metadata()
 
             segmentation_interface_name = f"Segmentation{mapped_plane_suffix}"
@@ -137,9 +146,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
                 continue
             segmentation_metadata = self.data_interface_objects[segmentation_interface_name].get_metadata()
             new_metadata = _update_metadata_with_new_imaging_plane_name(
-                    metadata=segmentation_metadata,
-                    imaging_plane_name=imaging_plane_name,
-                )
+                metadata=segmentation_metadata,
+                imaging_plane_name=imaging_plane_name,
+            )
             # override device name
             new_metadata["Ophys"]["Device"][0]["name"] = imaging_metadata["Ophys"]["Device"][0]["name"]
             new_metadata["Ophys"]["ImagingPlane"][0]["device"] = imaging_metadata["Ophys"]["Device"][0]["name"]
@@ -150,10 +159,16 @@ class IntoTheVoidNWBConverter(NWBConverter):
     def get_conversion_options(self, stub_test: bool = False) -> dict:
         """Automatically set conversion options for each data interface."""
         conversion_options = dict(Imaging=dict(stub_test=stub_test))
-        segmentation_interfaces = [interface_name for interface_name in self.data_interface_objects.keys() if "Segmentation" in interface_name]
+        segmentation_interfaces = [
+            interface_name for interface_name in self.data_interface_objects.keys() if "Segmentation" in interface_name
+        ]
         for interface_ind, interface_name in enumerate(segmentation_interfaces):
             # Automatically set plane_segmentation_name for the segmentation interfaces
             metadata = self.get_metadata()
-            plane_segmentation_name = metadata["Ophys"]["ImageSegmentation"]["plane_segmentations"][interface_ind]["name"]
-            conversion_options[interface_name] = dict(plane_segmentation_name=plane_segmentation_name, stub_test=stub_test)
+            plane_segmentation_name = metadata["Ophys"]["ImageSegmentation"]["plane_segmentations"][interface_ind][
+                "name"
+            ]
+            conversion_options[interface_name] = dict(
+                plane_segmentation_name=plane_segmentation_name, stub_test=stub_test
+            )
         return conversion_options

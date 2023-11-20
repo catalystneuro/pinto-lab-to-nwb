@@ -18,7 +18,7 @@ Parameters:
 
 ### Imaging to Segmentation plane mapping
 
-The `imaging_to_segmentation_plane_map` is a dictionary that maps each imaging plane name to the segmentation plane name. 
+The `imaging_to_segmentation_plane_map` is a dictionary that maps each imaging plane name to the segmentation plane name.
 This is necessary when there are multiple channels or planes in the imaging data and the segmentation data, as the name
 provided in the segmentation interface might not be the same as the name provided in the imaging interface.
 
@@ -27,12 +27,12 @@ For example if the imaging data has a single plane with two channels, the defaul
 
 ```python
 from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_imaging_to_segmentation_name_mapping
-  
+
 # The folder path that contains the Bruker TIF imaging output (.ome.tif files).
 imaging_folder_path = "NCCR62_2023_07_06_IntoTheVoid_t_series_Dual_color-000"
 # The folder that contains the Suite2P segmentation output.
 segmentation_folder_path =  "NCCR62_2023_07_06_IntoTheVoid_t_series_Dual_color-000/suite2p"
-    
+
 # Provide a mapping between the imaging and segmentation planes
 # The default mapping is to rely on the order of the planes in the imaging and segmentation folders
 # The keys of the dictionary are the imaging plane names and the values are the segmentation plane names
