@@ -32,21 +32,20 @@ class WidefieldProcessedSegmentationinterface(BaseSegmentationExtractorInterface
         imaging_plane_name = "ImagingPlaneBlue"
         metadata["Ophys"]["ImagingPlane"][0].update(name=imaging_plane_name)
         plane_segmentation_metadata = metadata["Ophys"]["ImageSegmentation"]["plane_segmentations"][0]
+        default_plane_segmentation_name = plane_segmentation_metadata["name"]
         plane_segmentation_name = "PlaneSegmentationProcessedBlue"
         plane_segmentation_metadata.update(
             name=plane_segmentation_name,
             imaging_plane=imaging_plane_name,
         )
         summary_images_metadata = metadata["Ophys"]["SegmentationImages"]
-        images_container_name = "SegmentationImagesProcessedBlue"
-        summary_images_metadata.update(
-            name=images_container_name,
-            description="Contains the contrast based vasculature mask and the PCA based mask for the blue channel.",
-            images=[
-                dict(name="vasculature", description="The contrast based vasculature mask for the blue channel."),
-                dict(name="pca_blue", description="The PCA based mask for the blue channel."),
-            ],
+        _ = summary_images_metadata.pop(default_plane_segmentation_name)
+        images_metadata = dict(
+            vasculature=dict(name="vasculature", description="The contrast based vasculature mask for the blue channel."),
+            pca_blue=dict(name="pca_blue", description="The PCA based mask for the blue channel."),
         )
+
+        metadata["Ophys"]["SegmentationImages"].update({"PlaneSegmentationProcessedBlue": images_metadata})
 
         return metadata
 
