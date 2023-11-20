@@ -45,7 +45,7 @@ def session_to_nwb(
         verbose=False,
     )
 
-    conversion_options = converter.get_conversion_options(stub_test=stub_test)
+    conversion_options = {interface_name: dict(stub_test=stub_test) for interface_name in converter.data_interface_objects.keys()}
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
