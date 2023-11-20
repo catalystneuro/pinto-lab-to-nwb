@@ -1,7 +1,6 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 import re
 from pathlib import Path
-from typing import Optional
 from dateutil import tz
 from neuroconv.utils import (
     load_dict_from_file,
@@ -11,12 +10,14 @@ from neuroconv.utils import (
 )
 
 from pinto_lab_to_nwb.into_the_void import IntoTheVoidNWBConverter
+from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_imaging_to_segmentation_name_mapping
 
 
 def session_to_nwb(
     nwbfile_path: FilePathType,
     two_photon_imaging_folder_path: FolderPathType,
-    segmentation_folder_path: Optional[FolderPathType] = None,
+    segmentation_folder_path: FolderPathType,
+    imaging_to_segmentation_plane_map: dict = None,
     stub_test: bool = False,
 ):
     """
@@ -30,26 +31,21 @@ def session_to_nwb(
         The folder path that contains the Bruker TIF imaging output (.ome.tif files).
     segmentation_folder_path: FolderPathType
         The folder that contains the Suite2P segmentation output.
+    imaging_to_segmentation_plane_map: dict, optional
+        The optional mapping between the imaging and segmentation planes.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
     two_photon_imaging_folder_path = Path(two_photon_imaging_folder_path)
 
-    source_data = dict()
-    conversion_options = dict()
+    converter = IntoTheVoidNWBConverter(
+        imaging_folder_path=imaging_folder_path,
+        segmentation_folder_path=segmentation_folder_path,
+        imaging_to_segmentation_plane_map=imaging_to_segmentation_plane_map,
+        verbose=False,
+    )
 
-    # Add Imaging
-    imaging_source_data = dict(folder_path=str(two_photon_imaging_folder_path))
-    source_data.update(dict(Imaging=imaging_source_data))
-    conversion_options.update(dict(Imaging=dict(stub_test=stub_test)))
-
-    # Add Segmentation (optional)
-    if segmentation_folder_path:
-        segmentation_source_data = dict(folder_path=str(segmentation_folder_path))
-        source_data.update(dict(Segmentation=segmentation_source_data))
-        conversion_options.update(dict(Segmentation=dict(stub_test=False)))
-
-    converter = IntoTheVoidNWBConverter(source_data=source_data)
+    conversion_options = converter.get_conversion_options(stub_test=stub_test)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
@@ -80,14 +76,26 @@ def session_to_nwb(
 
 if __name__ == "__main__":
     # Parameters for conversion
-    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/NCCR62_2023_07_06_IntoTheVoid_t_series_Dual_color-000")
+
+    # The folder path that contains the Bruker TIF imaging output (.ome.tif files).
+    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/NCCR32_2022_11_03_IntoTheVoid_t_series-005")
+    # The folder that contains the Suite2P segmentation output.
     segmentation_folder_path = imaging_folder_path / "suite2p"
-    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/imaging_stub2.nwb")
+    nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
     stub_test = True
+    nwbfile_name = imaging_folder_path.name + ".nwb" if not stub_test else "stub_" + imaging_folder_path.name + ".nwb"
+    nwbfile_path = nwbfile_folder_path / nwbfile_name
+
+
+    # Provide a mapping between the imaging and segmentation planes
+    # The default mapping is to rely on the order of the planes in the imaging and segmentation folders
+    # The keys of the dictionary are the imaging plane names and the values are the segmentation plane names
+    plane_map = get_default_imaging_to_segmentation_name_mapping(imaging_folder_path, segmentation_folder_path)
 
     session_to_nwb(
         nwbfile_path=nwbfile_path,
         two_photon_imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
+        imaging_to_segmentation_plane_map=plane_map,
         stub_test=stub_test,
     )
