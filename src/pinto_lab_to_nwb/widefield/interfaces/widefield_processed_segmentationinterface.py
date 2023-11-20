@@ -41,7 +41,9 @@ class WidefieldProcessedSegmentationinterface(BaseSegmentationExtractorInterface
         summary_images_metadata = metadata["Ophys"]["SegmentationImages"]
         _ = summary_images_metadata.pop(default_plane_segmentation_name)
         images_metadata = dict(
-            vasculature=dict(name="vasculature", description="The contrast based vasculature mask for the blue channel."),
+            vasculature=dict(
+                name="vasculature", description="The contrast based vasculature mask for the blue channel."
+            ),
             pca_blue=dict(name="pca_blue", description="The PCA based mask for the blue channel."),
         )
 
