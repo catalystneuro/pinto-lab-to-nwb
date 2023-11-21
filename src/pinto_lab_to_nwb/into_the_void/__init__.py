@@ -1,2 +1,1 @@
-from .into_the_voidbehaviorinterface import IntoTheVoidBehaviorInterface
 from .into_the_voidnwbconverter import IntoTheVoidNWBConverter
