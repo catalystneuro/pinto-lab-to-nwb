@@ -10,14 +10,14 @@ from neuroconv.utils import (
 )
 
 from pinto_lab_to_nwb.into_the_void import IntoTheVoidNWBConverter
-from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_imaging_to_segmentation_name_mapping
+from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_segmentation_to_imaging_name_mapping
 
 
 def session_to_nwb(
     nwbfile_path: FilePathType,
     two_photon_imaging_folder_path: FolderPathType,
     segmentation_folder_path: FolderPathType,
-    imaging_to_segmentation_plane_map: dict = None,
+    segmentation_to_imaging_plane_map: dict = None,
     stub_test: bool = False,
 ):
     """
@@ -31,7 +31,7 @@ def session_to_nwb(
         The folder path that contains the Bruker TIF imaging output (.ome.tif files).
     segmentation_folder_path: FolderPathType
         The folder that contains the Suite2P segmentation output.
-    imaging_to_segmentation_plane_map: dict, optional
+    segmentation_to_imaging_plane_map: dict, optional
         The optional mapping between the imaging and segmentation planes.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
@@ -41,7 +41,7 @@ def session_to_nwb(
     converter = IntoTheVoidNWBConverter(
         imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
-        imaging_to_segmentation_plane_map=imaging_to_segmentation_plane_map,
+        segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
         verbose=False,
     )
 
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # The folder path that will contain the NWB files.
     nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
     # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
-    stub_test = True
+    stub_test = False
 
     # The file path to the NWB file that will be created.
     nwbfile_name = imaging_folder_path.name + ".nwb" if not stub_test else "stub_" + imaging_folder_path.name + ".nwb"
@@ -92,13 +92,12 @@ if __name__ == "__main__":
 
     # Provide a mapping between the imaging and segmentation planes
     # The default mapping is to rely on the order of the planes in the imaging and segmentation folders
-    # The keys of the dictionary are the imaging plane names and the values are the segmentation plane names
-    plane_map = get_default_imaging_to_segmentation_name_mapping(imaging_folder_path, segmentation_folder_path)
+    plane_map = get_default_segmentation_to_imaging_name_mapping(imaging_folder_path, segmentation_folder_path)
 
     session_to_nwb(
         nwbfile_path=nwbfile_path,
         two_photon_imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
-        imaging_to_segmentation_plane_map=plane_map,
+        segmentation_to_imaging_plane_map=plane_map,
         stub_test=stub_test,
     )

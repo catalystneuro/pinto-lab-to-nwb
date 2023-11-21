@@ -53,12 +53,12 @@ class IntoTheVoidNWBConverter(NWBConverter):
         imaging_folder_path: FolderPathType,
         verbose: bool = False,
         segmentation_folder_path: Optional[FolderPathType] = None,
-        imaging_to_segmentation_plane_map: dict = None,
+        segmentation_to_imaging_map: dict = None,
     ):
         self.verbose = verbose
         self.data_interface_objects = dict()
 
-        self.imaging_to_segmentation_plane_map = imaging_to_segmentation_plane_map
+        self.plane_map = segmentation_to_imaging_map
 
         streams = BrukerTiffMultiPlaneImagingInterface.get_streams(
             folder_path=imaging_folder_path,
@@ -104,7 +104,6 @@ class IntoTheVoidNWBConverter(NWBConverter):
                             continue
 
                     plane_name_suffix = f"{channel_name.capitalize()}{plane_name.capitalize()}"
-                    plane_map = self.imaging_to_segmentation_plane_map
                     segmentation_interface_name = f"Segmentation{plane_name_suffix}"
                     segmentation_source_data = dict(
                         folder_path=segmentation_folder_path,
@@ -112,8 +111,8 @@ class IntoTheVoidNWBConverter(NWBConverter):
                         plane_name=plane_name,
                         verbose=verbose,
                     )
-                    if plane_map:
-                        plane_segmentation_name = "PlaneSegmentation" + plane_map.get(plane_name_suffix, None).replace("_", "")
+                    if self.plane_map:
+                        plane_segmentation_name = "PlaneSegmentation" + self.plane_map.get(plane_name_suffix, None).replace("_", "")
                         segmentation_source_data.update(
                             plane_segmentation_name=plane_segmentation_name,
                         )
@@ -123,7 +122,7 @@ class IntoTheVoidNWBConverter(NWBConverter):
                     )
 
     def get_metadata(self) -> DeepDict:
-        if not self.imaging_to_segmentation_plane_map:
+        if not self.plane_map:
             return super().get_metadata()
 
         imaging_metadata = self.data_interface_objects["Imaging"].get_metadata()
