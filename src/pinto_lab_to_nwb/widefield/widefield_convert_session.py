@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 from dateutil import tz
 from neuroconv.utils import (
     load_dict_from_file,
@@ -11,7 +10,6 @@ from neuroconv.utils import (
     FolderPathType,
     FilePathType,
 )
-from pynwb import NWBHDF5IO
 
 from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
@@ -37,6 +35,8 @@ def session_to_nwb(
         The folder path that contains the Micro-Manager OME-TIF imaging output (.ome.tif files).
     strobe_sequence_file_path: FilePathType
             The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
+    info_file_path: FilePathType
+        The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
     subject_metadata_file_path: FilePathType, optional
         The file path to the subject metadata file. This file should contain the 'metadata' key.
     stub_test: bool, optional
@@ -102,6 +102,21 @@ def session_to_nwb(
         ),
     )
 
+    # Add segmentation and summary images for the blue and violet channels
+    source_data.update(
+        dict(
+            SegmentationProcessedBlue=dict(
+                folder_path=str(widefield_imaging_folder_path),
+            ),
+            SummaryImagesBlue=dict(
+                folder_path=str(widefield_imaging_folder_path),
+            ),
+            SummaryImagesViolet=dict(
+                folder_path=str(widefield_imaging_folder_path),
+            ),
+        )
+    )
+
     converter = WideFieldNWBConverter(source_data=source_data)
 
     # Add datetime to conversion
@@ -139,12 +154,18 @@ def session_to_nwb(
 
 if __name__ == "__main__":
     # Parameters for conversion
+
+    # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
     imaging_folder_path = Path("/Users/weian/data/DrChicken_20230419_20hz")
+    # The file path to the strobe sequence file.
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
+    # The file path to the downsampled imaging data in Matlab format (.mat file).
     processed_imaging_path = imaging_folder_path / "rawf_full.mat"
+    # The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
     info_file_path = imaging_folder_path / "info.mat"
     subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
-    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/stub_DrChicken_20230419_20hz.nwb")
+    # The file path to the NWB file that will be created.
+    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/DrChicken_20230419_20hz.nwb")
 
     stub_test = False
 

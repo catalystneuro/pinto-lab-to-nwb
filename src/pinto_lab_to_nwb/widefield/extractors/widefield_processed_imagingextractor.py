@@ -18,6 +18,7 @@ class WidefieldProcessedImagingExtractor(ImagingExtractor):
         info_file_path: FilePathType,
         strobe_sequence_file_path: FilePathType,
         channel_name: Optional[str] = "blue",
+        convert_video_dtype_to: Optional[DtypeType] = None,
     ):
         """
         The ImagingExtractor for loading the downsampled imaging data for the Widefield session.
@@ -32,10 +33,13 @@ class WidefieldProcessedImagingExtractor(ImagingExtractor):
             The path that points to the strobe sequence file. This file should contain the 'strobe_session_key' key.
         channel_name: str, optional
             The name of the channel to load the frames for. The default is 'blue'.
+        convert_video_dtype_to: DtypeType, optional
+            The dtype to convert the video to.
         """
         import h5py
 
         super().__init__(file_path=file_path)
+        self.convert_video_dtype_to = convert_video_dtype_to or np.uint16
 
         file = h5py.File(file_path, "r")
         expected_struct_name = "rawf"
@@ -97,7 +101,7 @@ class WidefieldProcessedImagingExtractor(ImagingExtractor):
     ) -> np.ndarray:
         if start_frame is not None and end_frame is not None and start_frame == end_frame:
             video_start_frame = int(self.frame_indices[start_frame])
-            return self._video[video_start_frame].transpose((1, 0))
+            return self._video[video_start_frame].transpose((1, 0)).astype(dtype=self.convert_video_dtype_to)
 
         start_frame = start_frame or 0
         end_frame = end_frame or self.get_num_frames()
@@ -113,6 +117,7 @@ class WidefieldProcessedImagingExtractor(ImagingExtractor):
             self._video.lazy_slice[original_video_start_frame:original_video_end_frame, ...]
             .lazy_transpose(axis_order=(0, 2, 1))
             .dsetread()
+            .astype(dtype=self.convert_video_dtype_to)
         )
 
         filtered_indices = self.frame_indices[start_frame:end_frame] - self.frame_indices[start_frame]
