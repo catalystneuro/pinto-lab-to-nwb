@@ -4,10 +4,10 @@ from typing import Optional
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
-from neuroconv.utils import FolderPathType
+from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
 
 
-def get_default_imaging_to_segmentation_name_mapping(
+def get_default_segmentation_to_imaging_name_mapping(
     imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
 ) -> dict or None:
     """
@@ -31,17 +31,18 @@ def get_default_imaging_to_segmentation_name_mapping(
     if len(available_planes) == 1 and len(available_channels) == 1:
         return None
 
-    plane_default_mapping = dict()
-    for channel_name, mapped_channel_name in zip(streams["channel_streams"], available_channels):
-        mapped_values = [
-            f"{mapped_channel_name.capitalize()}{plane_name.capitalize()}" for plane_name in available_planes
-        ]
-        if len(available_planes) > 1:
-            plane_default_mapping.update(dict(zip(mapped_values, streams["plane_streams"][channel_name])))
-        else:
-            plane_default_mapping.update({mapped_values[0]: channel_name})
+    segmentation_channel_plane_names = [
+        f"{channel_name.capitalize()}{plane_name.capitalize()}" for plane_name in available_planes for channel_name in available_channels
+    ]
 
-    return plane_default_mapping
+    if len(available_planes) > 1:
+        imaging_channel_plane_names = [plane_name for channel_name in streams["plane_streams"] for plane_name in streams["plane_streams"][channel_name]]
+    else:
+        imaging_channel_plane_names = streams["channel_streams"]
+
+    segmentation_to_imaging_name_mapping = dict(zip(segmentation_channel_plane_names, imaging_channel_plane_names))
+
+    return segmentation_to_imaging_name_mapping
 
 
 class IntoTheVoidNWBConverter(NWBConverter):
@@ -112,10 +113,33 @@ class IntoTheVoidNWBConverter(NWBConverter):
                         verbose=verbose,
                     )
                     if plane_map:
+                        plane_segmentation_name = "PlaneSegmentation" + plane_map.get(plane_name_suffix, None).replace("_", "")
                         segmentation_source_data.update(
-                            plane_segmentation_name=plane_map.get(plane_name_suffix, None).replace("_", "")
+                            plane_segmentation_name=plane_segmentation_name,
                         )
                     Suite2pSegmentationInterface(**segmentation_source_data)
                     self.data_interface_objects.update(
                         {segmentation_interface_name: Suite2pSegmentationInterface(**segmentation_source_data)}
                     )
+
+    def get_metadata(self) -> DeepDict:
+        if not self.imaging_to_segmentation_plane_map:
+            return super().get_metadata()
+
+        imaging_metadata = self.data_interface_objects["Imaging"].get_metadata()
+        metadata = super().get_metadata()
+
+        # override device metadata
+        device_metadata = imaging_metadata["Ophys"]["Device"]
+        device_name = device_metadata[0]["name"]
+        metadata["Ophys"]["Device"] = device_metadata
+
+        for metadata_ind in range(len(imaging_metadata["Ophys"]["ImagingPlane"])):
+            optical_channel_metadata = imaging_metadata["Ophys"]["ImagingPlane"][metadata_ind]["optical_channel"]
+            # override optical channel metadata
+            metadata["Ophys"]["ImagingPlane"][metadata_ind]["optical_channel"] = optical_channel_metadata
+
+            # override device link
+            metadata["Ophys"]["ImagingPlane"][metadata_ind]["device"] = device_name
+
+        return metadata
