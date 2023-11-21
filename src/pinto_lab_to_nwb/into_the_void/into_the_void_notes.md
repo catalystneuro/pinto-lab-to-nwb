@@ -59,7 +59,7 @@ For example if the imaging data has two planes with a single channel, the defaul
 ```python
 {'Chan1Plane0': 'Ch2_000001', 'Chan1Plane1': 'Ch2_000002'}
 ```
-where the segmentation interface metadata for "Chan1Plane0" will be mapped to use the same naming convention as the imaging interface metadata 
+where the segmentation interface metadata for "Chan1Plane0" will be mapped to use the same naming convention as the imaging interface metadata
 for "Ch2_000001" (the first plane for the channel named 'Ch2' in the Bruker XML file).
 
 If the default mapping has to be adjusted, the user can provide a custom mapping as follows:
@@ -67,7 +67,7 @@ If the default mapping has to be adjusted, the user can provide a custom mapping
 ```python
 imaging_to_segmentation_plane_map = {'Chan2Plane0': 'Ch1', 'Chan1Plane0': 'Ch2'}
 ```
-where the segmentation interface metadata for "Chan2Plane0" (the second channel from 'plane0' from the segmentation output from Suite2p) 
+where the segmentation interface metadata for "Chan2Plane0" (the second channel from 'plane0' from the segmentation output from Suite2p)
 will be mapped to use the same naming convention as the imaging interface metadata  for "Ch1" (the channel named 'Ch1' in the Bruker XML file).
 
 ### Example usage

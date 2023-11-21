@@ -32,11 +32,17 @@ def get_default_segmentation_to_imaging_name_mapping(
         return None
 
     segmentation_channel_plane_names = [
-        f"{channel_name.capitalize()}{plane_name.capitalize()}" for plane_name in available_planes for channel_name in available_channels
+        f"{channel_name.capitalize()}{plane_name.capitalize()}"
+        for plane_name in available_planes
+        for channel_name in available_channels
     ]
 
     if len(available_planes) > 1:
-        imaging_channel_plane_names = [plane_name for channel_name in streams["plane_streams"] for plane_name in streams["plane_streams"][channel_name]]
+        imaging_channel_plane_names = [
+            plane_name
+            for channel_name in streams["plane_streams"]
+            for plane_name in streams["plane_streams"][channel_name]
+        ]
     else:
         imaging_channel_plane_names = streams["channel_streams"]
 
@@ -112,7 +118,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
                         verbose=verbose,
                     )
                     if self.plane_map:
-                        plane_segmentation_name = "PlaneSegmentation" + self.plane_map.get(plane_name_suffix, None).replace("_", "")
+                        plane_segmentation_name = "PlaneSegmentation" + self.plane_map.get(
+                            plane_name_suffix, None
+                        ).replace("_", "")
                         segmentation_source_data.update(
                             plane_segmentation_name=plane_segmentation_name,
                         )
