@@ -3,6 +3,7 @@ from typing import Optional
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import BaseImagingExtractorInterface
 from neuroconv.tools.roiextractors import get_nwb_imaging_metadata
 from neuroconv.utils import FilePathType, dict_deep_update
+from roiextractors.extraction_tools import DtypeType
 
 from pinto_lab_to_nwb.widefield.extractors.widefield_processed_imagingextractor import (
     WidefieldProcessedImagingExtractor,
@@ -20,6 +21,7 @@ class WidefieldProcessedImagingInterface(BaseImagingExtractorInterface):
         info_file_path: FilePathType,
         strobe_sequence_file_path: FilePathType,
         channel_name: Optional[str] = "blue",
+        convert_video_dtype_to: Optional[DtypeType] = None,
         verbose: bool = True,
     ):
         """
@@ -35,6 +37,8 @@ class WidefieldProcessedImagingInterface(BaseImagingExtractorInterface):
             The path that points to the strobe sequence file. This file should contain the 'strobe_session_key' key.
         channel_name: str, optional
             The name of the channel to load the frames for. The default is 'blue'.
+        convert_video_dtype_to: DtypeType, optional
+            The dtype to convert the video to.
         """
 
         super().__init__(
@@ -42,6 +46,7 @@ class WidefieldProcessedImagingInterface(BaseImagingExtractorInterface):
             info_file_path=info_file_path,
             strobe_sequence_file_path=strobe_sequence_file_path,
             channel_name=channel_name,
+            convert_video_dtype_to=convert_video_dtype_to,
         )
         self.channel_name = channel_name
         self.verbose = verbose
