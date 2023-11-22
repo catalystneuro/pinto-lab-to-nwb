@@ -1,68 +1,105 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
+import re
 from pathlib import Path
-from typing import Union
-import datetime
-from zoneinfo import ZoneInfo
-
-from neuroconv.utils import load_dict_from_file, dict_deep_update
+from dateutil import tz
+from neuroconv.utils import (
+    load_dict_from_file,
+    dict_deep_update,
+    FolderPathType,
+    FilePathType,
+)
 
 from pinto_lab_to_nwb.into_the_void import IntoTheVoidNWBConverter
+from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_segmentation_to_imaging_name_mapping
 
 
-def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, Path], stub_test: bool = False):
-    data_dir_path = Path(data_dir_path)
-    output_dir_path = Path(output_dir_path)
-    if stub_test:
-        output_dir_path = output_dir_path / "nwb_stub"
-    output_dir_path.mkdir(parents=True, exist_ok=True)
+def session_to_nwb(
+    nwbfile_path: FilePathType,
+    two_photon_imaging_folder_path: FolderPathType,
+    segmentation_folder_path: FolderPathType,
+    segmentation_to_imaging_plane_map: dict = None,
+    stub_test: bool = False,
+):
+    """
+    Converts a single session to NWB.
 
-    session_id = "subject_identifier_usually"
-    nwbfile_path = output_dir_path / f"{session_id}.nwb"
+    Parameters
+    ----------
+    nwbfile_path : FilePathType
+        The file path to the NWB file that will be created.
+    two_photon_imaging_folder_path: FolderPathType
+        The folder path that contains the Bruker TIF imaging output (.ome.tif files).
+    segmentation_folder_path: FolderPathType
+        The folder that contains the Suite2P segmentation output.
+    segmentation_to_imaging_plane_map: dict, optional
+        The optional mapping between the imaging and segmentation planes.
+    stub_test: bool, optional
+        For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
+    """
+    two_photon_imaging_folder_path = Path(two_photon_imaging_folder_path)
 
-    source_data = dict()
-    conversion_options = dict()
+    converter = IntoTheVoidNWBConverter(
+        imaging_folder_path=imaging_folder_path,
+        segmentation_folder_path=segmentation_folder_path,
+        segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
+        verbose=False,
+    )
 
-    # Add Recording
-    source_data.update(dict(Recording=dict()))
-    conversion_options.update(dict(Recording=dict()))
-
-    # Add LFP
-    source_data.update(dict(LFP=dict()))
-    conversion_options.update(dict(LFP=dict()))
-
-    # Add Sorting
-    source_data.update(dict(Sorting=dict()))
-    conversion_options.update(dict(Sorting=dict()))
-
-    # Add Behavior
-    source_data.update(dict(Behavior=dict()))
-    conversion_options.update(dict(Behavior=dict()))
-
-    converter = IntoTheVoidNWBConverter(source_data=source_data)
+    conversion_options = {
+        interface_name: dict(stub_test=stub_test) for interface_name in converter.data_interface_objects.keys()
+    }
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
-    datetime.datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
-    date = datetime.datetime.today()  # TO-DO: Get this from author
-    metadata["NWBFile"]["session_start_time"] = date
+    # For data provenance we can add the time zone information to the conversion if missing
+    session_start_time = metadata["NWBFile"]["session_start_time"]
+    tzinfo = tz.gettz("US/Pacific")
+    metadata["NWBFile"].update(session_start_time=session_start_time.replace(tzinfo=tzinfo))
 
     # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent / "into_the_void_metadata.yaml"
+    editable_metadata_path = Path(__file__).parent / "general_metadata.yaml"
     editable_metadata = load_dict_from_file(editable_metadata_path)
     metadata = dict_deep_update(metadata, editable_metadata)
 
+    # Update metadata with subject_id and session_id from folder_path
+    # NCCR51_2023_04_07_no_task_dual_color_jrgeco_t_series-001
+    file_naming_pattern = r"^(?P<subject_id>[^_]+)_(?:\d{4}_\d{2}_\d{2}_)(?P<session_id>.+)"
+    match = re.match(file_naming_pattern, str(two_photon_imaging_folder_path.name))
+    if match:
+        groups_dict = match.groupdict()
+        metadata["NWBFile"].update(session_id=groups_dict["session_id"].replace("_", "-"))
+        metadata["Subject"].update(subject_id=groups_dict["subject_id"])
+
     # Run conversion
-    converter.run_conversion(metadata=metadata, nwbfile_path=nwbfile_path, conversion_options=conversion_options)
+    converter.run_conversion(
+        nwbfile_path=nwbfile_path, metadata=metadata, overwrite=True, conversion_options=conversion_options
+    )
 
 
 if __name__ == "__main__":
     # Parameters for conversion
-    data_dir_path = Path("/Directory/With/Raw/Formats/")
-    output_dir_path = Path("~/conversion_nwb/")
+
+    # The folder path that contains the Bruker TIF imaging output (.ome.tif files).
+    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/NCCR32_2022_11_03_IntoTheVoid_t_series-005")
+    # The folder that contains the Suite2P segmentation output.
+    segmentation_folder_path = imaging_folder_path / "suite2p"
+    # The folder path that will contain the NWB files.
+    nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
+    # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     stub_test = False
 
+    # The file path to the NWB file that will be created.
+    nwbfile_name = imaging_folder_path.name + ".nwb" if not stub_test else "stub_" + imaging_folder_path.name + ".nwb"
+    nwbfile_path = nwbfile_folder_path / nwbfile_name
+
+    # Provide a mapping between the imaging and segmentation planes
+    # The default mapping is to rely on the order of the planes in the imaging and segmentation folders
+    plane_map = get_default_segmentation_to_imaging_name_mapping(imaging_folder_path, segmentation_folder_path)
+
     session_to_nwb(
-        data_dir_path=data_dir_path,
-        output_dir_path=output_dir_path,
+        nwbfile_path=nwbfile_path,
+        two_photon_imaging_folder_path=imaging_folder_path,
+        segmentation_folder_path=segmentation_folder_path,
+        segmentation_to_imaging_plane_map=plane_map,
         stub_test=stub_test,
     )

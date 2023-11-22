@@ -54,7 +54,7 @@ pip install -r src/pinto_lab_to_nwb/into_the_void/into_the_void_requirements.txt
 
 You can run a specific conversion with the following command:
 ```
-python src/pinto_lab_to_nwb/into_the_void/into_the_void_conversion_script.py
+python src/pinto_lab_to_nwb/into_the_void/into_the_void_convert_session.py
 ```
 
 ## Repository structure
@@ -69,17 +69,14 @@ Each conversion is organized in a directory of its own in the `src` directory:
     ├── setup.py
     └── src
         ├── pinto_lab_to_nwb
-        │   ├── conversion_directory_1
         │   └── into_the_void
-        │       ├── into_the_voidbehaviorinterface.py
+        │       ├── general_metadata.yaml
         │       ├── into_the_void_convert_session.py
-        │       ├── into_the_void_metadata.yml
         │       ├── into_the_voidnwbconverter.py
         │       ├── into_the_void_requirements.txt
         │       ├── into_the_void_notes.md
 
         │       └── __init__.py
-        │   ├── conversion_directory_b
 
         └── __init__.py
 
@@ -87,8 +84,7 @@ Each conversion is organized in a directory of its own in the `src` directory:
 
 * `into_the_void_convert_sesion.py`: this script defines the function to convert one full session of the conversion.
 * `into_the_void_requirements.txt`: dependencies specific to this conversion.
-* `into_the_void_metadata.yml`: metadata in yaml format for this specific conversion.
-* `into_the_voidbehaviorinterface.py`: the behavior interface. Usually ad-hoc for each conversion.
+* `general_metadata.yml`: general metadata in yaml format (e.g. session description, experimenter, subject metadata).
 * `into_the_voidnwbconverter.py`: the place where the `NWBConverter` class is defined.
 * `into_the_void_notes.md`: notes and comments concerning this specific conversion.
 

@@ -9,6 +9,13 @@ from pynwb import NWBFile
 from pinto_lab_to_nwb.widefield.interfaces import WidefieldImagingInterface, WidefieldProcessedImagingInterface
 from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
 from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
+from pinto_lab_to_nwb.widefield.interfaces import (
+    WidefieldImagingInterface,
+    WidefieldProcessedImagingInterface,
+    WidefieldProcessedSegmentationinterface,
+    WidefieldSegmentationImagesBlueInterface,
+    WidefieldSegmentationImagesVioletInterface,
+)
 
 
 class WideFieldNWBConverter(NWBConverter):
@@ -19,6 +26,9 @@ class WideFieldNWBConverter(NWBConverter):
         ImagingViolet=WidefieldImagingInterface,
         ProcessedImagingBlue=WidefieldProcessedImagingInterface,
         ProcessedImagingViolet=WidefieldProcessedImagingInterface,
+        SegmentationProcessedBlue=WidefieldProcessedSegmentationinterface,
+        SummaryImagesBlue=WidefieldSegmentationImagesBlueInterface,
+        SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
     )
 
     def __init__(self, source_data: Dict[str, dict], verbose: bool = True):

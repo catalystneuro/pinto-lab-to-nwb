@@ -1,2 +1,2 @@
 neuroconv[micromanagertiff]
-pymatreader>=0.0.32
+pymatreader==0.0.32
