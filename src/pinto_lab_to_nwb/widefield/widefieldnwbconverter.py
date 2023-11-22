@@ -4,11 +4,11 @@ from typing import Optional, Dict
 
 from natsort import natsorted
 from neuroconv import NWBConverter
-from neuroconv.tools import get_module
-from pynwb import NWBFile, TimeSeries
+from pynwb import NWBFile
 
 from pinto_lab_to_nwb.widefield.interfaces import WidefieldImagingInterface, WidefieldProcessedImagingInterface
 from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
+from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
 
 
 class WideFieldNWBConverter(NWBConverter):
@@ -35,35 +35,19 @@ class WideFieldNWBConverter(NWBConverter):
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
 
         # Add motion correction for blue and violet frames
-        interface_names = ["ImagingBlue", "ImagingViolet"]
-        for interface_name in interface_names:
-            channel_name = interface_name.replace("Imaging", "")
-            motion_correction_series_name = f"MotionCorrectionSeries{channel_name}"
-            assert (
-                motion_correction_series_name not in nwbfile.acquisition
-            ), f"Motion correction series '{motion_correction_series_name}' already exists in NWBFile."
+        imaging_interface_names = ["ImagingBlue", "ImagingViolet"]
+        for interface_name in imaging_interface_names:
+            photon_series_index = conversion_options[interface_name]["photon_series_index"]
+            one_photon_series_name = metadata["Ophys"]["OnePhotonSeries"][photon_series_index]["name"]
+
             imaging_interface = self.data_interface_objects[interface_name]
             frame_indices = imaging_interface.imaging_extractor.frame_indices
-
+            # filter motion correction for blue/violet frames
             motion_correction = self._motion_correction_data[frame_indices, :]
-            num_frames = imaging_interface.imaging_extractor.get_num_frames()
             if interface_name in conversion_options:
                 if "stub_test" in conversion_options[interface_name]:
                     if conversion_options[interface_name]["stub_test"]:
                         num_frames = 100
                         motion_correction = motion_correction[:num_frames, :]
 
-            assert (
-                motion_correction.shape[0] == num_frames
-            ), f"The number of frames for motion correction ({motion_correction.shape[0]}) does not match the number of frames ({num_frames}) from the {interface_name} imaging interface."
-
-            one_photon_series = nwbfile.acquisition[f"OnePhotonSeries{channel_name}"]
-            yx_time_series = TimeSeries(
-                name=motion_correction_series_name,
-                description=f"The yx shifts for the {channel_name.lower()} frames.",
-                data=motion_correction,
-                unit="px",
-                timestamps=one_photon_series.timestamps,
-            )
-            ophys = get_module(nwbfile, "ophys")
-            ophys.add(yx_time_series)
+            add_motion_correction(nwbfile=nwbfile, motion_correction_series=motion_correction, one_photon_series_name=one_photon_series_name)
