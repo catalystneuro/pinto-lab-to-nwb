@@ -60,4 +60,8 @@ class WideFieldNWBConverter(NWBConverter):
                         num_frames = 100
                         motion_correction = motion_correction[:num_frames, :]
 
-            add_motion_correction(nwbfile=nwbfile, motion_correction_series=motion_correction, one_photon_series_name=one_photon_series_name)
+            add_motion_correction(
+                nwbfile=nwbfile,
+                motion_correction_series=motion_correction,
+                one_photon_series_name=one_photon_series_name,
+            )
