@@ -11,6 +11,7 @@ from neuroconv.utils import (
     FilePathType,
 )
 
+from pinto_lab_to_nwb.behavior.utils import load_timestamps
 from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
 
@@ -22,6 +23,8 @@ def session_to_nwb(
     processed_imaging_file_path: FilePathType,
     info_file_path: FilePathType,
     subject_metadata_file_path: Optional[FilePathType] = None,
+    virmen_file_path: Optional[FilePathType] = None,
+    behavior_timestamps_file_path: Optional[FilePathType] = None,
     stub_test: bool = False,
 ):
     """
@@ -39,6 +42,11 @@ def session_to_nwb(
         The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
     subject_metadata_file_path: FilePathType, optional
         The file path to the subject metadata file. This file should contain the 'metadata' key.
+    virmen_file_path: FilePathType, optional
+        The file path to the ViRMEN .mat file.
+    behavior_timestamps_file_path: FilePathType, optional
+        The file path to that points to the .mat file containing the timestamps for the behavior data.
+        These timestamps are used to set the times of the behavior data in the NWB file.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -117,7 +125,16 @@ def session_to_nwb(
         )
     )
 
+    # Add behavior
+    if virmen_file_path:
+        source_data.update(BehaviorViRMEN=dict(file_path=str(virmen_file_path)))
+
     converter = WideFieldNWBConverter(source_data=source_data)
+
+    # Add aligned timestamps for behavior
+    if behavior_timestamps_file_path:
+        aligned_timestamps = load_timestamps(timestamps_file_path=behavior_timestamps_file_path)
+        converter.data_interface_objects["BehaviorViRMEN"].set_aligned_timestamps(aligned_timestamps=aligned_timestamps)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
@@ -164,6 +181,11 @@ if __name__ == "__main__":
     # The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
     info_file_path = imaging_folder_path / "info.mat"
     subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
+
+    # The file path to the ViRMEN .mat file.
+    virmen_file_path = "/Volumes/t7-ssd/Pinto/Behavior/DrChicken_TowersTaskSwitchEasy_Session_20230419_105733.mat"
+    # The file path to that points to the .mat file containing the timestamps for the behavior data.
+    behavior_timestamps_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/sync_data.csv"
     # The file path to the NWB file that will be created.
     nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/DrChicken_20230419_20hz.nwb")
 
@@ -176,5 +198,7 @@ if __name__ == "__main__":
         processed_imaging_file_path=processed_imaging_path,
         info_file_path=info_file_path,
         subject_metadata_file_path=subject_metadata_file_path,
+        virmen_file_path=virmen_file_path,
+        behavior_timestamps_file_path=behavior_timestamps_file_path,
         stub_test=stub_test,
     )
