@@ -1,6 +1,4 @@
 """Primary class for converting experiment-specific behavior."""
-from datetime import datetime
-
 import numpy as np
 import pandas as pd
 import scipy
@@ -11,42 +9,52 @@ from pynwb import TimeSeries
 from pynwb.behavior import Position, CompassDirection
 from pynwb.file import NWBFile
 
-from neuroconv.utils import FilePathType, dict_deep_update
-from neuroconv.basedatainterface import BaseDataInterface
+from neuroconv.utils import FilePathType, dict_deep_update, calculate_regular_series_rate
+from neuroconv.basetemporalalignmentinterface import BaseTemporalAlignmentInterface
 from neuroconv.tools.nwb_helpers import get_module
 from neuroconv.tools.signal_processing import get_rising_frames_from_ttl
 
 from ndx_pinto_metadata import LabMetaDataExtension, MazeExtension
-from ndx_events import Events
+from ndx_events import AnnotatedEventsTable
 
 from pinto_lab_to_nwb.behavior.utils import create_indexed_array
 
 
-class ViRMENBehaviorInterface(BaseDataInterface):
+class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
     """Behavior interface for into_the_void conversion"""
 
     def __init__(self, file_path: FilePathType, verbose: bool = True):
         self.verbose = verbose
         super().__init__(file_path=file_path)
         self._mat_dict = read_mat(filename=file_path)
+        self._timestamps = None
 
     def get_metadata(self):
         metadata = super().get_metadata()
 
         session = self._mat_dict["session"]
         experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
-        format_string = "%m/%d/%Y %I:%M:%S %p"
-        date_from_mat = f"{session['date']} {session['time']}"
-        session_start_time = datetime.strptime(date_from_mat, format_string)
+        # format_string = "%m/%d/%Y %I:%M:%S %p"
+        # date_from_mat = f"{session['date']} {session['time']}"
+        # session_start_time = datetime.strptime(date_from_mat, format_string)
 
         metadata_from_mat_dict = dict(
-            Subject=dict(subject_id=session["animal"], age="P7D", sex="U", species="Mus musculus"),
-            NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
+            Subject=dict(subject_id=session["animal"]),
+            NWBFile=dict(experimenter=experimenter),
         )
 
         metadata = dict_deep_update(metadata, metadata_from_mat_dict)
 
         return metadata
+
+    def get_original_timestamps(self) -> np.ndarray:
+        return np.squeeze(self._mat_dict["session"]["timestamps"].toarray())
+
+    def get_timestamps(self) -> np.ndarray:
+        return self._timestamps if self._timestamps is not None else self.get_original_timestamps()
+
+    def set_aligned_timestamps(self, aligned_timestamps: np.ndarray):
+        self._timestamps = aligned_timestamps
 
     def add_lab_meta_data(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
@@ -206,15 +214,19 @@ class ViRMENBehaviorInterface(BaseDataInterface):
         cue_parameter_names = [param for param in cue_parameter_names if param not in ["salientside", "distractorside"]]
         for cue_parameter_name in cue_parameter_names:
             data = [cue_parameters[task_name][trial_ind][cue_parameter_name] for trial_ind in range(num_trials)]
+            is_data_ragged_array = any(isinstance(value, np.ndarray) for value in data)
             trials_column_kwargs = dict(
                 name=cue_parameter_name,
                 description=f"{task_name} cue parameter.",
-                data=data,
             )
+            if is_data_ragged_array:
+                data, indexed_array_indices = create_indexed_array(data)
+                trials_column_kwargs.update(index=indexed_array_indices)
 
-            if isinstance(data[0], np.ndarray):
-                indexed_array, indexed_array_indices = create_indexed_array(data)
-                trials_column_kwargs.update(data=indexed_array, index=indexed_array_indices)
+            if all(np.isnan(data)):
+                continue
+
+            trials_column_kwargs.update(data=data)
 
             nwbfile.trials.add_column(**trials_column_kwargs)
 
@@ -246,17 +258,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
     def add_events(self, nwbfile: NWBFile):
         behavior = get_module(nwbfile, "behavior")
-        timestamps = np.squeeze(self._mat_dict["session"]["timestamps"].toarray())
-        licks = self._get_time_series(series_name="licks")
-        if licks is not None:
-            licks_time_series = TimeSeries(
-                name="licks",
-                data=H5DataIO(licks, compression="gzip"),
-                timestamps=H5DataIO(timestamps, compression="gzip"),
-                description="The lick response measured over time.",
-                unit="a.u.",  # TODO confirm what is unit
-            )
-            behavior.add(licks_time_series)
+        timestamps = self.get_timestamps()
         opto_voltage = self._get_time_series("optoVoltageOut")
         if opto_voltage is not None:
             opto_voltage_time_series = TimeSeries(
@@ -264,42 +266,49 @@ class ViRMENBehaviorInterface(BaseDataInterface):
                 data=H5DataIO(opto_voltage, compression="gzip"),
                 timestamps=H5DataIO(timestamps, compression="gzip"),
                 description="The voltage passed to the opto LED.",
-                unit="Volts",
+                unit="volts",
             )
             behavior.add(opto_voltage_time_series)
+
+        ttl_events = AnnotatedEventsTable(
+            name="TTLs",
+            description="The times when the eye tracking and/or imaging was on.",
+        )
 
         eye_tracking_ttl = self._get_time_series("eyeCam")
         if eye_tracking_ttl is not None:
             rising_frames = get_rising_frames_from_ttl(trace=eye_tracking_ttl)
             eye_tracking_times = timestamps[rising_frames]
-            eye_tracking_events = Events(
-                name="eye_tracking_times",
-                description="The times when the eye tracking camera was on.",
-                timestamps=eye_tracking_times,
+            ttl_events.add_event_type(
+                label='EyeTracking',
+                event_description="The times when the eye tracking camera was on.",
+                event_times=eye_tracking_times,
             )
-            behavior.add(eye_tracking_events)
 
         widefield_ttl = self._get_time_series("widefield")
         if widefield_ttl is not None:
             rising_frames = get_rising_frames_from_ttl(trace=widefield_ttl)
             widefield_times = timestamps[rising_frames]
-            widefield_events = Events(
-                name="widefield_times",
-                description="The times when the widefield imaging was on.",
-                timestamps=widefield_times,
+            ttl_events.add_event_type(
+                label='Widefield',
+                event_description="The times when the widefield imaging was on.",
+                event_times=widefield_times,
             )
-            behavior.add(widefield_events)
 
         two_photon_ttl = self._get_time_series("twop")
         if two_photon_ttl is not None:
             rising_frames = get_rising_frames_from_ttl(trace=two_photon_ttl)
             two_photon_times = timestamps[rising_frames]
-            two_photon_events = Events(
-                name="two_photon_times",
-                description="The times when the two photon imaging was on.",
-                timestamps=two_photon_times,
+            ttl_events.add_event_type(
+                label='TwoPhoton',
+                event_description="The times when the two photon imaging was on.",
+                event_times=two_photon_times,
             )
-            behavior.add(two_photon_events)
+
+        if ttl_events.event_times is None:
+            return
+
+        nwbfile.add_acquisition(ttl_events)
 
     def _get_time_series(self, series_name: str = "licks"):
         if series_name not in self._mat_dict["session"]:
@@ -323,8 +332,13 @@ class ViRMENBehaviorInterface(BaseDataInterface):
 
         position = session["position"]  # x,y,z,viewangle
 
-        timestamps = np.squeeze(session["timestamps"].toarray())
-        # rate = calculate_regular_series_rate(timestamps)
+        timestamps = self.get_timestamps()
+        rate = calculate_regular_series_rate(timestamps)
+        if rate:
+            timing_kwargs = dict(rate=rate, starting_time=timestamps[0])
+        else:
+            assert len(timestamps) == position.shape[0], f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
+            timing_kwargs = dict(H5DataIO(timestamps, compression="gzip"))
 
         position_data = position[:, :-1]
         view_angle_data = position[:, -1]
@@ -334,14 +348,14 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             data=H5DataIO(position_data, compression="gzip"),
             reference_frame="unknown",  # todo
             conversion=0.01,
-            timestamps=H5DataIO(timestamps, compression="gzip"),
+            **timing_kwargs,
         )
 
         view_angle_obj.create_spatial_series(
             name="PositionViewAngle",
             data=H5DataIO(view_angle_data, compression="gzip"),
             reference_frame="unknown",  # todo
-            timestamps=H5DataIO(timestamps, compression="gzip"),
+            **timing_kwargs
         )
 
         velocity = session["velocity"]
@@ -353,14 +367,14 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             data=H5DataIO(velocity_data, compression="gzip"),
             unit="m/s",
             conversion=0.01,
-            timestamps=H5DataIO(timestamps, compression="gzip"),
+            **timing_kwargs,
         )
 
         view_angle_obj.create_spatial_series(
             name="VelocityViewAngle",
             data=H5DataIO(view_angle_velocity_data, compression="gzip"),
             reference_frame="unknown",  # todo
-            timestamps=H5DataIO(timestamps, compression="gzip"),
+            **timing_kwargs,
         )
 
         sensor_dots = session["sensordots"]
@@ -368,7 +382,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             name="TimeSeriesSensorDots",
             data=H5DataIO(sensor_dots, compression="gzip"),
             unit="a.u.",
-            timestamps=H5DataIO(timestamps, compression="gzip"),
+            **timing_kwargs,
         )
 
         velocity_gain = session["velocityGain"]
@@ -376,7 +390,7 @@ class ViRMENBehaviorInterface(BaseDataInterface):
             name="TimeSeriesVelocityGain",
             data=H5DataIO(velocity_gain, compression="gzip"),
             unit="a.u.",
-            timestamps=H5DataIO(timestamps, compression="gzip"),
+            **timing_kwargs,
         )
 
         behavior = get_module(nwbfile, "behavior", "contains processed behavioral data")
