@@ -66,7 +66,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         maze_extension = MazeExtension(
             name="mazes",
             description=f"The parameters for the mazes in {experiment_name}.",
-            id=list(list(mazes.values())[0]),
+            id=np.arange(len(list(mazes.values())[0])),
         )
 
         for maze in mazes:
