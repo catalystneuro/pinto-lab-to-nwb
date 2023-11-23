@@ -8,10 +8,10 @@ from roiextractors.extraction_tools import DtypeType
 
 
 def add_motion_correction(
-        nwbfile: NWBFile,
-        motion_correction_series: np.ndarray,
-        one_photon_series_name: str,
-        convert_to_dtype: DtypeType = None,
+    nwbfile: NWBFile,
+    motion_correction_series: np.ndarray,
+    one_photon_series_name: str,
+    convert_to_dtype: DtypeType = None,
 ) -> None:
     """Add motion correction data to the NWBFile.
 
