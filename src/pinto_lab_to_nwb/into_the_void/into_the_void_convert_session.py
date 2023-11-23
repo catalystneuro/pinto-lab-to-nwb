@@ -1,6 +1,8 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 import re
 from pathlib import Path
+from typing import Optional
+
 from dateutil import tz
 from neuroconv.utils import (
     load_dict_from_file,
@@ -9,6 +11,7 @@ from neuroconv.utils import (
     FilePathType,
 )
 
+from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.into_the_void import IntoTheVoidNWBConverter
 from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_segmentation_to_imaging_name_mapping
 
@@ -18,6 +21,9 @@ def session_to_nwb(
     two_photon_imaging_folder_path: FolderPathType,
     segmentation_folder_path: FolderPathType,
     segmentation_to_imaging_plane_map: dict = None,
+    subject_metadata_file_path: Optional[FilePathType] = None,
+    virmen_file_path: Optional[FilePathType] = None,
+    behavior_timestamps_file_path: Optional[FilePathType] = None,
     stub_test: bool = False,
 ):
     """
@@ -33,6 +39,13 @@ def session_to_nwb(
         The folder that contains the Suite2P segmentation output.
     segmentation_to_imaging_plane_map: dict, optional
         The optional mapping between the imaging and segmentation planes.
+    subject_metadata_file_path: FilePathType, optional
+        The file path to the .mat file containing the subject metadata.
+    virmen_file_path: FilePathType, optional
+        The file path to the ViRMEN .mat file.
+    behavior_timestamps_file_path: FilePathType, optional
+        The file path to that points to the .mat file containing the timestamps for the behavior data.
+        These timestamps are used to set the times of the behavior data in the NWB file.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -42,11 +55,13 @@ def session_to_nwb(
         imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
+        virmen_file_path=virmen_file_path,
+        behavior_timestamps_file_path=behavior_timestamps_file_path,
         verbose=False,
     )
 
     conversion_options = {
-        interface_name: dict(stub_test=stub_test) for interface_name in converter.data_interface_objects.keys()
+        interface_name: dict(stub_test=stub_test) for interface_name in converter.data_interface_objects.keys() if interface_name != "BehaviorViRMEN"
     }
 
     # Add datetime to conversion
@@ -70,6 +85,12 @@ def session_to_nwb(
         metadata["NWBFile"].update(session_id=groups_dict["session_id"].replace("_", "-"))
         metadata["Subject"].update(subject_id=groups_dict["subject_id"])
 
+        if subject_metadata_file_path:
+            subject_metadata = make_subject_metadata(
+                subject_id=groups_dict["subject_id"], subject_metadata_file_path=subject_metadata_file_path
+            )
+            metadata = dict_deep_update(metadata, subject_metadata)
+
     # Run conversion
     converter.run_conversion(
         nwbfile_path=nwbfile_path, metadata=metadata, overwrite=True, conversion_options=conversion_options
@@ -80,9 +101,17 @@ if __name__ == "__main__":
     # Parameters for conversion
 
     # The folder path that contains the Bruker TIF imaging output (.ome.tif files).
-    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/NCCR32_2022_11_03_IntoTheVoid_t_series-005")
+    imaging_folder_path = Path("/Users/weian/data/NCCR51_2023_04_07_no_task_dual_color_jrgeco_t_series-001")
     # The folder that contains the Suite2P segmentation output.
     segmentation_folder_path = imaging_folder_path / "suite2p"
+
+    # The file path to the .mat file containing the subject metadata.
+    subject_metadata_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat")
+
+    # The file path to the ViRMEN .mat file.
+    virmen_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/NCCR51_TowersTaskSwitchEasy_Session_20230407_143948.mat")
+    # The file path to that points to the .mat file containing the timestamps for the behavior data.
+    timestamps_file_path = Path("/Volumes/t7-ssd/Pinto/eyetracking/sync_data.csv")
     # The folder path that will contain the NWB files.
     nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
     # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
@@ -101,5 +130,8 @@ if __name__ == "__main__":
         two_photon_imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_plane_map=plane_map,
+        subject_metadata_file_path=subject_metadata_file_path,
+        virmen_file_path=virmen_file_path,
+        behavior_timestamps_file_path=timestamps_file_path,
         stub_test=stub_test,
     )
