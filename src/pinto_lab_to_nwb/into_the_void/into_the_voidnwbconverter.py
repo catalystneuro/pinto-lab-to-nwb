@@ -11,7 +11,7 @@ from pinto_lab_to_nwb.behavior.utils import load_timestamps
 
 
 def get_default_segmentation_to_imaging_name_mapping(
-        imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
+    imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
 ) -> dict or None:
     """
     Get the default mapping between imaging and segmentation planes.
@@ -29,9 +29,7 @@ def get_default_segmentation_to_imaging_name_mapping(
     )
 
     plane_streams = [
-        plane_name
-        for channel_name in streams["plane_streams"]
-        for plane_name in streams["plane_streams"][channel_name]
+        plane_name for channel_name in streams["plane_streams"] for plane_name in streams["plane_streams"][channel_name]
     ]
 
     available_channels = Suite2pSegmentationInterface.get_available_channels(folder_path=segmentation_folder_path)
@@ -59,13 +57,13 @@ class IntoTheVoidNWBConverter(NWBConverter):
     """Primary conversion class for the Two Photon Imaging (Bruker experiment)."""
 
     def __init__(
-            self,
-            imaging_folder_path: FolderPathType,
-            verbose: bool = False,
-            segmentation_folder_path: Optional[FolderPathType] = None,
-            segmentation_to_imaging_map: dict = None,
-            virmen_file_path: Optional[FilePathType] = None,
-            behavior_timestamps_file_path: Optional[FilePathType] = None,
+        self,
+        imaging_folder_path: FolderPathType,
+        verbose: bool = False,
+        segmentation_folder_path: Optional[FolderPathType] = None,
+        segmentation_to_imaging_map: dict = None,
+        virmen_file_path: Optional[FilePathType] = None,
+        behavior_timestamps_file_path: Optional[FilePathType] = None,
     ):
         self.verbose = verbose
         self.data_interface_objects = dict()
