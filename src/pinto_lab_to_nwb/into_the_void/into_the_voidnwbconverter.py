@@ -6,7 +6,7 @@ from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMul
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
 from neuroconv.utils import FolderPathType, DeepDict, FilePathType
 
-from pinto_lab_to_nwb.behavior.interfaces.virmenbehaviorinterface import ViRMENBehaviorInterface
+from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
 from pinto_lab_to_nwb.behavior.utils import load_timestamps
 
 
