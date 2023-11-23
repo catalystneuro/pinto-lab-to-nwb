@@ -343,10 +343,15 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         position_data = position[:, :-1]
         view_angle_data = position[:, -1]
 
+        # For the position, our convention across tasks and mazes is that position (0,0) is the start of the "sample"
+        # region (also referred to as the "cue" region) (note that this is not the position where the mouse starts
+        # each trial, which varies by maze and task).
+        reference_frame = "(0,0) is the start of the 'sample' region (or 'cue' region) which varies by maze and task."
+
         position_obj.create_spatial_series(
             name="SpatialSeries",
             data=H5DataIO(position_data, compression="gzip"),
-            reference_frame="unknown",  # todo
+            reference_frame=reference_frame,
             conversion=0.01,
             **timing_kwargs,
         )
@@ -354,7 +359,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         view_angle_obj.create_spatial_series(
             name="PositionViewAngle",
             data=H5DataIO(view_angle_data, compression="gzip"),
-            reference_frame="unknown",  # todo
+            reference_frame=reference_frame,
             **timing_kwargs
         )
 
@@ -373,7 +378,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         view_angle_obj.create_spatial_series(
             name="VelocityViewAngle",
             data=H5DataIO(view_angle_velocity_data, compression="gzip"),
-            reference_frame="unknown",  # todo
+            reference_frame=reference_frame,
             **timing_kwargs,
         )
 
