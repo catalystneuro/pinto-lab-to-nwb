@@ -1,6 +1,7 @@
 """Primary NWBConverter class for this dataset."""
 from neuroconv import NWBConverter
 
+from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
 from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldImagingInterface,
     WidefieldProcessedImagingInterface,
@@ -21,4 +22,5 @@ class WideFieldNWBConverter(NWBConverter):
         SegmentationProcessedBlue=WidefieldProcessedSegmentationinterface,
         SummaryImagesBlue=WidefieldSegmentationImagesBlueInterface,
         SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
+        BehaviorViRMEN=ViRMENBehaviorInterface,
     )
