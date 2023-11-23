@@ -61,7 +61,9 @@ def session_to_nwb(
     )
 
     conversion_options = {
-        interface_name: dict(stub_test=stub_test) for interface_name in converter.data_interface_objects.keys() if interface_name != "BehaviorViRMEN"
+        interface_name: dict(stub_test=stub_test)
+        for interface_name in converter.data_interface_objects.keys()
+        if interface_name != "BehaviorViRMEN"
     }
 
     # Add datetime to conversion

@@ -280,7 +280,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             rising_frames = get_rising_frames_from_ttl(trace=eye_tracking_ttl)
             eye_tracking_times = timestamps[rising_frames]
             ttl_events.add_event_type(
-                label='EyeTracking',
+                label="EyeTracking",
                 event_description="The times when the eye tracking camera was on.",
                 event_times=eye_tracking_times,
             )
@@ -290,7 +290,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             rising_frames = get_rising_frames_from_ttl(trace=widefield_ttl)
             widefield_times = timestamps[rising_frames]
             ttl_events.add_event_type(
-                label='Widefield',
+                label="Widefield",
                 event_description="The times when the widefield imaging was on.",
                 event_times=widefield_times,
             )
@@ -300,7 +300,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             rising_frames = get_rising_frames_from_ttl(trace=two_photon_ttl)
             two_photon_times = timestamps[rising_frames]
             ttl_events.add_event_type(
-                label='TwoPhoton',
+                label="TwoPhoton",
                 event_description="The times when the two photon imaging was on.",
                 event_times=two_photon_times,
             )
@@ -337,7 +337,9 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         if rate:
             timing_kwargs = dict(rate=rate, starting_time=timestamps[0])
         else:
-            assert len(timestamps) == position.shape[0], f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
+            assert (
+                len(timestamps) == position.shape[0]
+            ), f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
             timing_kwargs = dict(H5DataIO(timestamps, compression="gzip"))
 
         position_data = position[:, :-1]
@@ -360,7 +362,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             name="PositionViewAngle",
             data=H5DataIO(view_angle_data, compression="gzip"),
             reference_frame=reference_frame,
-            **timing_kwargs
+            **timing_kwargs,
         )
 
         velocity = session["velocity"]
