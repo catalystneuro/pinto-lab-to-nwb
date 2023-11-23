@@ -2,6 +2,7 @@
 from pathlib import Path
 from typing import Optional, Dict
 
+import numpy as np
 from natsort import natsorted
 from neuroconv import NWBConverter
 from pynwb import NWBFile
@@ -37,7 +38,8 @@ class WideFieldNWBConverter(NWBConverter):
         # Load motion correction data
         imaging_interface = self.data_interface_objects["ImagingBlue"]
         imaging_folder_path = imaging_interface.source_data["folder_path"]
-        motion_correction_mat_files = natsorted(Path(imaging_folder_path).glob("*mcorr_1.mat"))
+        imaging_folder_name = Path(imaging_folder_path).stem
+        motion_correction_mat_files = natsorted(Path(imaging_folder_path).glob(f"{imaging_folder_name}*mcorr_1.mat"))
         assert motion_correction_mat_files, f"No motion correction files found in {imaging_folder_path}."
         self._motion_correction_data = load_motion_correction_data(file_paths=motion_correction_mat_files)
 
@@ -64,4 +66,5 @@ class WideFieldNWBConverter(NWBConverter):
                 nwbfile=nwbfile,
                 motion_correction_series=motion_correction,
                 one_photon_series_name=one_photon_series_name,
+                convert_to_dtype=np.uint16,
             )

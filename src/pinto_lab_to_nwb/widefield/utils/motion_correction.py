@@ -4,9 +4,15 @@ import numpy as np
 import pymatreader
 from neuroconv.tools import get_module
 from pynwb import NWBFile, TimeSeries
+from roiextractors.extraction_tools import DtypeType
 
 
-def add_motion_correction(nwbfile: NWBFile, motion_correction_series: np.ndarray, one_photon_series_name: str) -> None:
+def add_motion_correction(
+        nwbfile: NWBFile,
+        motion_correction_series: np.ndarray,
+        one_photon_series_name: str,
+        convert_to_dtype: DtypeType = None,
+) -> None:
     """Add motion correction data to the NWBFile.
 
     The x, y shifts for the imaging data (identified by 'one_photon_series_name' are added to the NWBFile as a TimeSeries.
@@ -20,7 +26,10 @@ def add_motion_correction(nwbfile: NWBFile, motion_correction_series: np.ndarray
         The x, y shifts for the imaging data.
     one_photon_series_name: str
         The name of the one photon series in the NWBFile.
+    convert_to_dtype: DtypeType, optional
+        The dtype to convert the motion correction series to.
     """
+    convert_to_dtype = convert_to_dtype or np.uint16
 
     assert (
         one_photon_series_name in nwbfile.acquisition
@@ -41,7 +50,7 @@ def add_motion_correction(nwbfile: NWBFile, motion_correction_series: np.ndarray
     xy_translation = TimeSeries(
         name="MotionCorrectionSeries" + name_suffix,
         description=f"The x, y shifts for the {one_photon_series_name} imaging data.",
-        data=motion_correction_series,
+        data=motion_correction_series.astype(dtype=convert_to_dtype),
         unit="px",
         timestamps=one_photon_series.timestamps,
     )
