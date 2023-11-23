@@ -4,11 +4,14 @@ from typing import Optional
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
-from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
+from neuroconv.utils import FolderPathType, DeepDict, FilePathType
+
+from pinto_lab_to_nwb.behavior.interfaces.virmenbehaviorinterface import ViRMENBehaviorInterface
+from pinto_lab_to_nwb.behavior.utils import load_timestamps
 
 
 def get_default_segmentation_to_imaging_name_mapping(
-    imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
+        imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
 ) -> dict or None:
     """
     Get the default mapping between imaging and segmentation planes.
@@ -25,11 +28,14 @@ def get_default_segmentation_to_imaging_name_mapping(
         plane_separation_type="disjoint",
     )
 
+    plane_streams = [
+        plane_name
+        for channel_name in streams["plane_streams"]
+        for plane_name in streams["plane_streams"][channel_name]
+    ]
+
     available_channels = Suite2pSegmentationInterface.get_available_channels(folder_path=segmentation_folder_path)
     available_planes = Suite2pSegmentationInterface.get_available_planes(folder_path=segmentation_folder_path)
-
-    if len(available_planes) == 1 and len(available_channels) == 1:
-        return None
 
     segmentation_channel_plane_names = [
         f"{channel_name.capitalize()}{plane_name.capitalize()}"
@@ -37,14 +43,12 @@ def get_default_segmentation_to_imaging_name_mapping(
         for channel_name in available_channels
     ]
 
-    if len(available_planes) > 1:
-        imaging_channel_plane_names = [
-            plane_name
-            for channel_name in streams["plane_streams"]
-            for plane_name in streams["plane_streams"][channel_name]
-        ]
+    num_channels = len(streams["channel_streams"])
+    num_planes = 1 if not plane_streams else len(plane_streams)
+    if num_channels == 1 and num_planes == 1:
+        imaging_channel_plane_names = [None]
     else:
-        imaging_channel_plane_names = streams["channel_streams"]
+        imaging_channel_plane_names = plane_streams if num_planes == 1 else streams["channel_streams"]
 
     segmentation_to_imaging_name_mapping = dict(zip(segmentation_channel_plane_names, imaging_channel_plane_names))
 
@@ -55,11 +59,13 @@ class IntoTheVoidNWBConverter(NWBConverter):
     """Primary conversion class for the Two Photon Imaging (Bruker experiment)."""
 
     def __init__(
-        self,
-        imaging_folder_path: FolderPathType,
-        verbose: bool = False,
-        segmentation_folder_path: Optional[FolderPathType] = None,
-        segmentation_to_imaging_map: dict = None,
+            self,
+            imaging_folder_path: FolderPathType,
+            verbose: bool = False,
+            segmentation_folder_path: Optional[FolderPathType] = None,
+            segmentation_to_imaging_map: dict = None,
+            virmen_file_path: Optional[FilePathType] = None,
+            behavior_timestamps_file_path: Optional[FilePathType] = None,
     ):
         self.verbose = verbose
         self.data_interface_objects = dict()
@@ -118,9 +124,10 @@ class IntoTheVoidNWBConverter(NWBConverter):
                         verbose=verbose,
                     )
                     if self.plane_map:
-                        plane_segmentation_name = "PlaneSegmentation" + self.plane_map.get(
-                            plane_name_suffix, None
-                        ).replace("_", "")
+                        mapped_plane_suffix = self.plane_map.get(plane_name_suffix, None)
+                        plane_segmentation_name = "PlaneSegmentation"
+                        if mapped_plane_suffix is not None:
+                            plane_segmentation_name = "PlaneSegmentation" + mapped_plane_suffix.replace("_", "")
                         segmentation_source_data.update(
                             plane_segmentation_name=plane_segmentation_name,
                         )
@@ -129,10 +136,15 @@ class IntoTheVoidNWBConverter(NWBConverter):
                         {segmentation_interface_name: Suite2pSegmentationInterface(**segmentation_source_data)}
                     )
 
-    def get_metadata(self) -> DeepDict:
-        if not self.plane_map:
-            return super().get_metadata()
+        if virmen_file_path:
+            behavior_interface = ViRMENBehaviorInterface(file_path=virmen_file_path, verbose=verbose)
+            if behavior_timestamps_file_path:
+                aligned_timestamps = load_timestamps(timestamps_file_path=behavior_timestamps_file_path)
+                behavior_interface.set_aligned_timestamps(aligned_timestamps=aligned_timestamps)
 
+            self.data_interface_objects.update(BehaviorViRMEN=behavior_interface)
+
+    def get_metadata(self) -> DeepDict:
         imaging_metadata = self.data_interface_objects["Imaging"].get_metadata()
         metadata = super().get_metadata()
 
