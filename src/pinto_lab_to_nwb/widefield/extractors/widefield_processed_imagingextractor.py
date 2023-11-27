@@ -107,19 +107,23 @@ class WidefieldProcessedImagingExtractor(ImagingExtractor):
         end_frame = end_frame or self.get_num_frames()
 
         # Ensure the end_frame does not exceed the available frames
-        start_frame = min(start_frame, self.get_num_frames() - 1)
-        end_frame = min(end_frame, self.get_num_frames() - 1)
+        last_batch = False
+        if end_frame >= self.get_num_frames():
+            end_frame = self.get_num_frames() - 1
+            last_batch = True
 
         original_video_start_frame = self.frame_indices[start_frame]
         original_video_end_frame = self.frame_indices[end_frame]
 
         video = (
-            self._video.lazy_slice[original_video_start_frame:original_video_end_frame, ...]
+            self._video.lazy_slice[original_video_start_frame : original_video_end_frame + int(last_batch), ...]
             .lazy_transpose(axis_order=(0, 2, 1))
             .dsetread()
             .astype(dtype=self.convert_video_dtype_to)
         )
 
-        filtered_indices = self.frame_indices[start_frame:end_frame] - self.frame_indices[start_frame]
+        filtered_indices = (
+            self.frame_indices[start_frame : end_frame + int(last_batch)] - self.frame_indices[start_frame]
+        )
 
         return video[filtered_indices]
