@@ -99,9 +99,13 @@ class WidefieldImagingExtractor(MicroManagerTiffImagingExtractor):
         original_video_start_frame = self.frame_indices[start_frame]
         original_video_end_frame = self.frame_indices[end_frame]
         video = super().get_video(
-            start_frame=original_video_start_frame, end_frame=original_video_end_frame + int(last_batch), channel=channel
+            start_frame=original_video_start_frame,
+            end_frame=original_video_end_frame + int(last_batch),
+            channel=channel,
         )
 
-        filtered_indices = self.frame_indices[start_frame:end_frame + int(last_batch)] - self.frame_indices[start_frame]
+        filtered_indices = (
+            self.frame_indices[start_frame : end_frame + int(last_batch)] - self.frame_indices[start_frame]
+        )
 
         return video[filtered_indices]
