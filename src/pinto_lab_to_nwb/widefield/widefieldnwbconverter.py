@@ -1,14 +1,22 @@
 """Primary NWBConverter class for this dataset."""
-from neuroconv import NWBConverter
+from pathlib import Path
+from typing import Optional, Dict
 
-from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
+import numpy as np
+from natsort import natsorted
+from neuroconv import NWBConverter
+from pynwb import NWBFile
+
 from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldImagingInterface,
     WidefieldProcessedImagingInterface,
     WidefieldProcessedSegmentationinterface,
     WidefieldSegmentationImagesBlueInterface,
     WidefieldSegmentationImagesVioletInterface,
+    ViRMENBehaviorInterface,
 )
+from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
+from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
 
 
 class WideFieldNWBConverter(NWBConverter):
@@ -24,3 +32,40 @@ class WideFieldNWBConverter(NWBConverter):
         SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
         BehaviorViRMEN=ViRMENBehaviorInterface,
     )
+
+    def __init__(self, source_data: Dict[str, dict], verbose: bool = True):
+        super().__init__(source_data, verbose)
+
+        # Load motion correction data
+        imaging_interface = self.data_interface_objects["ImagingBlue"]
+        imaging_folder_path = imaging_interface.source_data["folder_path"]
+        imaging_folder_name = Path(imaging_folder_path).stem
+        motion_correction_mat_files = natsorted(Path(imaging_folder_path).glob(f"{imaging_folder_name}*mcorr_1.mat"))
+        assert motion_correction_mat_files, f"No motion correction files found in {imaging_folder_path}."
+        self._motion_correction_data = load_motion_correction_data(file_paths=motion_correction_mat_files)
+
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
+        super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
+
+        # Add motion correction for blue and violet frames
+        imaging_interface_names = ["ImagingBlue", "ImagingViolet"]
+        for interface_name in imaging_interface_names:
+            photon_series_index = conversion_options[interface_name]["photon_series_index"]
+            one_photon_series_name = metadata["Ophys"]["OnePhotonSeries"][photon_series_index]["name"]
+
+            imaging_interface = self.data_interface_objects[interface_name]
+            frame_indices = imaging_interface.imaging_extractor.frame_indices
+            # filter motion correction for blue/violet frames
+            motion_correction = self._motion_correction_data[frame_indices, :]
+            if interface_name in conversion_options:
+                if "stub_test" in conversion_options[interface_name]:
+                    if conversion_options[interface_name]["stub_test"]:
+                        num_frames = 100
+                        motion_correction = motion_correction[:num_frames, :]
+
+            add_motion_correction(
+                nwbfile=nwbfile,
+                motion_correction_series=motion_correction,
+                one_photon_series_name=one_photon_series_name,
+                convert_to_dtype=np.uint16,
+            )
