@@ -7,8 +7,6 @@ from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMulti
 from neuroconv.utils import FolderPathType, DeepDict, FilePathType
 
 from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
-from pinto_lab_to_nwb.behavior.utils import load_timestamps
-
 
 def get_default_segmentation_to_imaging_name_mapping(
     imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
@@ -136,9 +134,6 @@ class IntoTheVoidNWBConverter(NWBConverter):
 
         if virmen_file_path:
             behavior_interface = ViRMENBehaviorInterface(file_path=virmen_file_path, verbose=verbose)
-            if behavior_timestamps_file_path:
-                aligned_timestamps = load_timestamps(timestamps_file_path=behavior_timestamps_file_path)
-                behavior_interface.set_aligned_timestamps(aligned_timestamps=aligned_timestamps)
 
             self.data_interface_objects.update(BehaviorViRMEN=behavior_interface)
 
