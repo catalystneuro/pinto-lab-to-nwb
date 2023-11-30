@@ -1,5 +1,7 @@
 from typing import Optional
+from warnings import warn
 
+import numpy as np
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import BaseImagingExtractorInterface
 from neuroconv.tools.roiextractors import get_nwb_imaging_metadata
 from neuroconv.utils import FilePathType, dict_deep_update
@@ -76,3 +78,38 @@ class WidefieldProcessedImagingInterface(BaseImagingExtractorInterface):
         )
 
         return metadata
+
+    def align_by_interpolation(self, unaligned_timestamps: np.ndarray, aligned_timestamps: np.ndarray) -> None:
+        if len(unaligned_timestamps) == len(aligned_timestamps):
+            return super().align_by_interpolation(unaligned_timestamps=unaligned_timestamps,
+                                                  aligned_timestamps=aligned_timestamps)
+
+        if len(unaligned_timestamps) > len(aligned_timestamps):
+            # Extract the extra timestamps
+            extra_timestamps = unaligned_timestamps[len(aligned_timestamps):]
+            # Interpolate a single value for the extra timestamps
+            interpolated_values_extra = np.interp(x=extra_timestamps, xp=aligned_timestamps,
+                                                  fp=unaligned_timestamps[:len(aligned_timestamps)])
+            interpolated_values_matched = np.interp(
+                x=self.get_timestamps()[:len(aligned_timestamps)],
+                xp=aligned_timestamps,
+                fp=unaligned_timestamps[:len(aligned_timestamps)],
+            )
+            # Combine the results
+            interpolated_values = np.concatenate([interpolated_values_matched, interpolated_values_extra])
+
+        else:
+            values_to_repeat = len(unaligned_timestamps) - len(aligned_timestamps)
+            # repeat the last value of unaligned_timestamps to match the length of aligned_timestamps
+            unaligned_timestamps = np.append(unaligned_timestamps, unaligned_timestamps[values_to_repeat:])
+            interpolated_values = np.interp(
+                x=self.get_timestamps(),
+                xp=aligned_timestamps,
+                fp=unaligned_timestamps,
+            )
+
+        if any(np.diff(interpolated_values) == 0):
+            warn("Interpolated timestamps are not unique. Falling back to using the unaligned timestamps.")
+            return self.set_aligned_timestamps(aligned_timestamps=unaligned_timestamps)
+
+        return self.set_aligned_timestamps(aligned_timestamps=interpolated_values)
