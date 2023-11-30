@@ -7,13 +7,13 @@ from natsort import natsorted
 from neuroconv import NWBConverter
 from pynwb import NWBFile
 
+from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENWidefieldTimeAlignedBehaviorInterface
 from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldImagingInterface,
     WidefieldProcessedImagingInterface,
     WidefieldProcessedSegmentationinterface,
     WidefieldSegmentationImagesBlueInterface,
     WidefieldSegmentationImagesVioletInterface,
-    ViRMENBehaviorInterface,
 )
 from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
 from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
@@ -31,6 +31,7 @@ class WideFieldNWBConverter(NWBConverter):
         SummaryImagesBlue=WidefieldSegmentationImagesBlueInterface,
         SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
         BehaviorViRMEN=ViRMENBehaviorInterface,
+        BehaviorViRMENWidefieldTimeAligned=ViRMENWidefieldTimeAlignedBehaviorInterface,
     )
 
     def __init__(self, source_data: Dict[str, dict], verbose: bool = True):
@@ -69,3 +70,20 @@ class WideFieldNWBConverter(NWBConverter):
                 one_photon_series_name=one_photon_series_name,
                 convert_to_dtype=np.uint16,
             )
+
+    def temporally_align_data_interfaces(self):
+        frame_time_aligned_behavior_interface = self.data_interface_objects["BehaviorViRMENWidefieldTimeAligned"]
+        blue_frames_timestamps = frame_time_aligned_behavior_interface.get_timestamps()
+        imaging_interface = self.data_interface_objects["ImagingBlue"]
+
+        imaging_interface.set_aligned_timestamps(aligned_timestamps=blue_frames_timestamps)
+
+        downsampled_imaging_interface = self.data_interface_objects["ProcessedImagingBlue"]
+        downsampled_imaging_interface.set_aligned_timestamps(aligned_timestamps=blue_frames_timestamps)
+
+        # For violet the interpolation doesn't work yet, the first 8 values are 0.0 after interpolation
+        violet_interface = self.data_interface_objects["ImagingViolet"]
+        violet_interface.align_by_interpolation(
+            aligned_timestamps=blue_frames_timestamps,
+            unaligned_timestamps=violet_interface.imaging_extractor._times
+        )
