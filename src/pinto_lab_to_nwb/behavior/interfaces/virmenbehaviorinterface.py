@@ -27,7 +27,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         self.verbose = verbose
         super().__init__(file_path=file_path)
         self._mat_dict = read_mat(filename=file_path)
-        self._timestamps = None
+        self._times = None
 
     def get_metadata(self):
         metadata = super().get_metadata()
@@ -51,10 +51,10 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         return np.squeeze(self._mat_dict["session"]["timestamps"].toarray())
 
     def get_timestamps(self) -> np.ndarray:
-        return self._timestamps if self._timestamps is not None else self.get_original_timestamps()
+        return self._times if self._times is not None else self.get_original_timestamps()
 
     def set_aligned_timestamps(self, aligned_timestamps: np.ndarray):
-        self._timestamps = aligned_timestamps
+        self._times = aligned_timestamps
 
     def add_lab_meta_data(self, nwbfile: NWBFile):
         session = self._mat_dict["session"]
@@ -259,6 +259,18 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
     def add_events(self, nwbfile: NWBFile):
         behavior = get_module(nwbfile, "behavior")
         timestamps = self.get_timestamps()
+
+        licks = self._get_time_series(series_name="licks")
+        if licks is not None:
+            licks_time_series = TimeSeries(
+                name="licks",
+                data=H5DataIO(licks, compression="gzip"),
+                timestamps=H5DataIO(timestamps, compression="gzip"),
+                description="The lick response measured over time.",
+                unit="a.u.",
+            )
+            behavior.add(licks_time_series)
+
         opto_voltage = self._get_time_series("optoVoltageOut")
         if opto_voltage is not None:
             opto_voltage_time_series = TimeSeries(
@@ -272,7 +284,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
 
         ttl_events = AnnotatedEventsTable(
             name="TTLs",
-            description="The times when the eye tracking and/or imaging was on.",
+            description="The times when the eye tracking and/or imaging was on determined from the ViRMEN system.",
         )
 
         eye_tracking_ttl = self._get_time_series("eyeCam")
@@ -308,7 +320,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         if ttl_events.event_times is None:
             return
 
-        nwbfile.add_acquisition(ttl_events)
+        behavior.add(ttl_events)
 
     def _get_time_series(self, series_name: str = "licks"):
         if series_name not in self._mat_dict["session"]:
@@ -340,7 +352,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             assert (
                 len(timestamps) == position.shape[0]
             ), f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
-            timing_kwargs = dict(H5DataIO(timestamps, compression="gzip"))
+            timing_kwargs = dict(timestamps=H5DataIO(timestamps, compression="gzip"))
 
         position_data = position[:, :-1]
         view_angle_data = position[:, -1]
@@ -353,6 +365,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         position_obj.create_spatial_series(
             name="SpatialSeries",
             data=H5DataIO(position_data, compression="gzip"),
+            description="The x, y, z position of the animal by ViRMEN iteration.",
             reference_frame=reference_frame,
             conversion=0.01,
             **timing_kwargs,
@@ -361,6 +374,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         view_angle_obj.create_spatial_series(
             name="PositionViewAngle",
             data=H5DataIO(view_angle_data, compression="gzip"),
+            description="The view angle of the animal by ViRMEN iteration.",
             reference_frame=reference_frame,
             **timing_kwargs,
         )
@@ -372,6 +386,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         velocity_ts = TimeSeries(
             name="Velocity",
             data=H5DataIO(velocity_data, compression="gzip"),
+            description="The velocity of the animal by ViRMEN iteration.",
             unit="m/s",
             conversion=0.01,
             **timing_kwargs,
@@ -380,22 +395,25 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         view_angle_obj.create_spatial_series(
             name="VelocityViewAngle",
             data=H5DataIO(view_angle_velocity_data, compression="gzip"),
+            description="The velocity view angle of the animal by ViRMEN iteration.",
             reference_frame=reference_frame,
             **timing_kwargs,
         )
 
         sensor_dots = session["sensordots"]
         sensor_dots_ts = TimeSeries(
-            name="TimeSeriesSensorDots",
+            name="SensorDots",
             data=H5DataIO(sensor_dots, compression="gzip"),
+            description="The sensordots by ViRMEN iteration.",
             unit="a.u.",
             **timing_kwargs,
         )
 
         velocity_gain = session["velocityGain"]
         velocity_gain_ts = TimeSeries(
-            name="TimeSeriesVelocityGain",
+            name="VelocityGain",
             data=H5DataIO(velocity_gain, compression="gzip"),
+            description="The velocity gain by ViRMEN iteration.",
             unit="a.u.",
             **timing_kwargs,
         )
