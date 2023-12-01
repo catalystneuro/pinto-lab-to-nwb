@@ -1,9 +1,12 @@
 """Primary NWBConverter class for this dataset."""
+from pathlib import Path
 from typing import Optional
 
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
+
+from pinto_lab_to_nwb.into_the_void.interfaces import HolographicStimulationInterface
 from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
 
 
@@ -85,6 +88,11 @@ class IntoTheVoidNWBConverter(NWBConverter):
                 Imaging=BrukerTiffSinglePlaneConverter(folder_path=imaging_folder_path, verbose=verbose),
             )
 
+        if list(Path(imaging_folder_path).glob("*MarkPoints*.xml")):
+            self.data_interface_objects.update(
+                HolographicStimulation=HolographicStimulationInterface(folder_path=imaging_folder_path, verbose=verbose),
+            )
+
         if segmentation_folder_path:
             available_planes = Suite2pSegmentationInterface.get_available_planes(folder_path=segmentation_folder_path)
             available_channels = Suite2pSegmentationInterface.get_available_channels(
@@ -145,5 +153,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
 
             # override device link
             metadata["Ophys"]["ImagingPlane"][metadata_ind]["device"] = device_name
+
+        if "HolographicStimulation" in self.data_interface_objects:
+            holographic_metadata = self.data_interface_objects["HolographicStimulation"].get_metadata()
+            metadata = dict_deep_update(metadata, holographic_metadata)
 
         return metadata
