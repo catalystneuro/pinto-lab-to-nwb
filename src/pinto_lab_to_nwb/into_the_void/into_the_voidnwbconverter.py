@@ -90,7 +90,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
 
         if list(Path(imaging_folder_path).glob("*MarkPoints*.xml")):
             self.data_interface_objects.update(
-                HolographicStimulation=HolographicStimulationInterface(folder_path=imaging_folder_path, verbose=verbose),
+                HolographicStimulation=HolographicStimulationInterface(
+                    folder_path=imaging_folder_path, verbose=verbose
+                ),
             )
 
         if segmentation_folder_path:

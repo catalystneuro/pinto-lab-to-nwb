@@ -17,8 +17,13 @@ from roiextractors.extractors.tiffimagingextractors.brukertiffimagingextractor i
     _determine_frame_rate,
 )
 from xml.etree import ElementTree
-from ndx_holographic_stimulation import PatternedOptogeneticSeries, SpiralScanning, PatternedOptogeneticStimulusSite, \
-    SpatialLightModulator, LightSource
+from ndx_holographic_stimulation import (
+    PatternedOptogeneticSeries,
+    SpiralScanning,
+    PatternedOptogeneticStimulusSite,
+    SpatialLightModulator,
+    LightSource,
+)
 
 
 def parse_mark_points_xml(mark_points_path):
@@ -62,10 +67,10 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         return metadata_schema
 
     def __init__(
-            self,
-            folder_path: FolderPathType,
-            plane_segmentation_name: Optional[str] = None,
-            verbose: bool = True,
+        self,
+        folder_path: FolderPathType,
+        plane_segmentation_name: Optional[str] = None,
+        verbose: bool = True,
     ):
         """
         Data interface for adding the holographic stimulation to the NWB file.
@@ -86,7 +91,9 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
 
         xml_root = _parse_xml(folder_path)
         sequence_elements = xml_root.findall("Sequence")
-        assert sequence_elements[0].find("MarkPoints") is not None, "The XML file does not contain the holographic stimulation data."
+        assert (
+            sequence_elements[0].find("MarkPoints") is not None
+        ), "The XML file does not contain the holographic stimulation data."
 
         # Get the frame period from the XML file
         frame_rate = _determine_frame_rate(element=sequence_elements[0])
@@ -102,11 +109,13 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
 
         for sequence in sequence_elements:
             frame_elements = sequence.findall("Frame")
-            absolute_times = [float(frame.attrib["absoluteTime"]) - first_frame_absolute_time for frame in frame_elements]
-            mark_points_file_name = sequence.find('MarkPoints').get('filename')
+            absolute_times = [
+                float(frame.attrib["absoluteTime"]) - first_frame_absolute_time for frame in frame_elements
+            ]
+            mark_points_file_name = sequence.find("MarkPoints").get("filename")
             file_path = self.folder_path / mark_points_file_name
             mark_points = parse_mark_points_xml(file_path)
-            point_elements = mark_points.findall('PVMarkPointElement')
+            point_elements = mark_points.findall("PVMarkPointElement")
 
             initial_delays = []
             durations = []
@@ -123,7 +132,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
                 points = galvo_point_element.findall("Point")
                 for point in points:
                     point_data = point.attrib
-                    point_index = int(point_data['Index']) - 1
+                    point_index = int(point_data["Index"]) - 1
                     if point_data in rois_dict[point_index]:
                         continue
                     rois_dict[point_index].append(point_data)
@@ -133,7 +142,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
 
                 # milliseconds to seconds
                 relative_start_time = float(galvo_data["InitialDelay"]) / 1000
-                spiral_width = (float(galvo_data["Duration"]) + float(galvo_data["InterPointDelay"]))
+                spiral_width = float(galvo_data["Duration"]) + float(galvo_data["InterPointDelay"])
 
                 num_repetitions = int(markpoint_data["Repetitions"])
                 stimulus_duration = (spiral_width * num_repetitions) / 1000
@@ -164,9 +173,9 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
     def get_holographic_series(self, timestamps):
         holographic_series = np.zeros(shape=(len(timestamps), self.num_rois))
         for sequence_data, cycle_start_time, duration in zip(
-                self.sequence_mark_points_list,
-                self.cycle_relative_start_times,
-                self.cycle_relative_durations,
+            self.sequence_mark_points_list,
+            self.cycle_relative_start_times,
+            self.cycle_relative_durations,
         ):
             # Index for points start at 1
             point_indices = [int(point["Index"]) - 1 for point in sequence_data["points"]]
@@ -215,12 +224,11 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         return metadata
 
     def add_to_nwbfile(
-            self,
-            nwbfile: NWBFile,
-            metadata: Optional[dict] = None,
-            stub_test: bool = False,
+        self,
+        nwbfile: NWBFile,
+        metadata: Optional[dict] = None,
+        stub_test: bool = False,
     ) -> None:
-
         metadata_copy = deepcopy(metadata)
 
         plane_segmentation_name = self.plane_segmentation_name
@@ -242,11 +250,11 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         spiral_scanning = SpiralScanning(
             name="stimulus_pattern",
             diameter=diameter,
-            height=height, # spiral size in microns is 15
+            height=height,  # spiral size in microns is 15
             number_of_revolutions=num_revolutions,
             description="The spiral scanning pattern used for holographic stimulation.",
-            duration=self.cycle_relative_durations[0], # duration of each spiral
-            number_of_stimulus_presentation=len(self.sequence_mark_points_list), # or 220 (22 * 10)
+            duration=self.cycle_relative_durations[0],  # duration of each spiral
+            number_of_stimulus_presentation=len(self.sequence_mark_points_list),  # or 220 (22 * 10)
             inter_stimulus_interval=inter_stimulus_interval,
         )
         nwbfile.add_lab_meta_data(spiral_scanning)
@@ -265,7 +273,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
             name="spatial_light_modulator",
             description="todo",
             model="todo",
-            resolution=0.01, # todo
+            resolution=0.01,  # todo
         )
         nwbfile.add_device(spatial_light_modulator)
         laser_name = self.sequence_mark_points_list[0]["UncagingLaser"]
