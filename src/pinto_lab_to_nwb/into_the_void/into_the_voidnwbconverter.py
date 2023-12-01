@@ -4,7 +4,12 @@ from typing import Optional
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
+from neuroconv.tools.signal_processing import get_rising_frames_from_ttl
 from neuroconv.utils import FolderPathType, DeepDict, FilePathType
+from neuroconv.utils import FilePathType
+
+from pinto_lab_to_nwb.into_the_void.interfaces import HolographicStimulationInterface
+from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
 
 from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
 
@@ -155,3 +160,16 @@ class IntoTheVoidNWBConverter(NWBConverter):
             metadata["Ophys"]["ImagingPlane"][metadata_ind]["device"] = device_name
 
         return metadata
+
+    def temporally_align_data_interfaces(self):
+        imaging_interface = self.data_interface_objects["Imaging"]
+        imaging_timestamps = imaging_interface.data_interface_objects["BrukerImaging"].get_timestamps()
+
+
+        behavior_interface = self.data_interface_objects["BehaviorViRMEN"]
+        behavior_timestamps = behavior_interface.get_timestamps()
+
+        two_photon_ttl = behavior_interface._get_time_series("twop")
+        rising_frames = get_rising_frames_from_ttl(trace=two_photon_ttl)
+        #two_photon_times = timestamps[rising_frames]
+
