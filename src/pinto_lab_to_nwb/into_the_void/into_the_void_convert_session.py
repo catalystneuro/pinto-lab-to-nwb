@@ -1,6 +1,8 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 import re
 from pathlib import Path
+from typing import Optional
+
 from dateutil import tz
 from neuroconv.utils import (
     load_dict_from_file,
@@ -9,6 +11,7 @@ from neuroconv.utils import (
     FilePathType,
 )
 
+from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.into_the_void import IntoTheVoidNWBConverter
 from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_segmentation_to_imaging_name_mapping
 
@@ -17,6 +20,7 @@ def session_to_nwb(
     nwbfile_path: FilePathType,
     two_photon_imaging_folder_path: FolderPathType,
     segmentation_folder_path: FolderPathType,
+    subject_metadata_file_path: Optional[FilePathType] = None,
     segmentation_to_imaging_plane_map: dict = None,
     stub_test: bool = False,
 ):
@@ -31,6 +35,8 @@ def session_to_nwb(
         The folder path that contains the Bruker TIF imaging output (.ome.tif files).
     segmentation_folder_path: FolderPathType
         The folder that contains the Suite2P segmentation output.
+    subject_metadata_file_path: FilePathType, optional
+        The file path to the subject metadata file ('subject_metadata.mat').
     segmentation_to_imaging_plane_map: dict, optional
         The optional mapping between the imaging and segmentation planes.
     stub_test: bool, optional
@@ -42,7 +48,7 @@ def session_to_nwb(
         imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
-        verbose=False,
+        verbose=True,
     )
 
     conversion_options = {
@@ -70,6 +76,15 @@ def session_to_nwb(
         metadata["NWBFile"].update(session_id=groups_dict["session_id"].replace("_", "-"))
         metadata["Subject"].update(subject_id=groups_dict["subject_id"])
 
+        if subject_metadata_file_path:
+            subject_metadata = make_subject_metadata(
+                subject_id=groups_dict["subject_id"], subject_metadata_file_path=subject_metadata_file_path
+            )
+            metadata = dict_deep_update(metadata, subject_metadata)
+
+    # Separate subject metadata from NWBFile metadata to add SubjectExtension
+    metadata["SubjectExtension"] = metadata.pop("Subject", None)
+
     # Run conversion
     converter.run_conversion(
         nwbfile_path=nwbfile_path, metadata=metadata, overwrite=True, conversion_options=conversion_options
@@ -83,6 +98,8 @@ if __name__ == "__main__":
     imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/NCCR32_2022_11_03_IntoTheVoid_t_series-005")
     # The folder that contains the Suite2P segmentation output.
     segmentation_folder_path = imaging_folder_path / "suite2p"
+    # The file path to the subject metadata file.
+    subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
     # The folder path that will contain the NWB files.
     nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
     # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
@@ -99,6 +116,7 @@ if __name__ == "__main__":
     session_to_nwb(
         nwbfile_path=nwbfile_path,
         two_photon_imaging_folder_path=imaging_folder_path,
+        subject_metadata_file_path=subject_metadata_file_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_plane_map=plane_map,
         stub_test=stub_test,
