@@ -74,17 +74,21 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
 
     def align_by_interpolation(self, unaligned_timestamps: np.ndarray, aligned_timestamps: np.ndarray) -> None:
         if len(unaligned_timestamps) == len(aligned_timestamps):
-            return super().align_by_interpolation(unaligned_timestamps=unaligned_timestamps, aligned_timestamps=aligned_timestamps)
+            return super().align_by_interpolation(
+                unaligned_timestamps=unaligned_timestamps, aligned_timestamps=aligned_timestamps
+            )
 
         if len(unaligned_timestamps) > len(aligned_timestamps):
             # Extract the extra timestamps
-            extra_timestamps = unaligned_timestamps[len(aligned_timestamps):]
+            extra_timestamps = unaligned_timestamps[len(aligned_timestamps) :]
             # Interpolate a single value for the extra timestamps
-            interpolated_values_extra = np.interp(x=extra_timestamps, xp=aligned_timestamps, fp=unaligned_timestamps[:len(aligned_timestamps)])
+            interpolated_values_extra = np.interp(
+                x=extra_timestamps, xp=aligned_timestamps, fp=unaligned_timestamps[: len(aligned_timestamps)]
+            )
             interpolated_values_matched = np.interp(
-                x=self.get_timestamps()[:len(aligned_timestamps)],
+                x=self.get_timestamps()[: len(aligned_timestamps)],
                 xp=aligned_timestamps,
-                fp=unaligned_timestamps[:len(aligned_timestamps)],
+                fp=unaligned_timestamps[: len(aligned_timestamps)],
             )
             # Combine the results
             interpolated_values = np.concatenate([interpolated_values_matched, interpolated_values_extra])
@@ -104,5 +108,3 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
             return self.set_aligned_timestamps(aligned_timestamps=unaligned_timestamps)
 
         return self.set_aligned_timestamps(aligned_timestamps=interpolated_values)
-
-

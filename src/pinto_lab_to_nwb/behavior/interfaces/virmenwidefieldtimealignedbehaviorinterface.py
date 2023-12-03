@@ -49,7 +49,7 @@ class ViRMENWidefieldTimeAlignedBehaviorInterface(BaseTemporalAlignmentInterface
             timing_kwargs = dict(rate=rate, starting_time=timestamps[0])
         else:
             assert (
-                    len(timestamps) == position.shape[0]
+                len(timestamps) == position.shape[0]
             ), f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
             timing_kwargs = dict(timestamps=H5DataIO(timestamps, compression="gzip"))
 

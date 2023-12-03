@@ -16,6 +16,7 @@ from pynwb import NWBFile
 
 from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
 
+
 def get_default_segmentation_to_imaging_name_mapping(
     imaging_folder_path: FolderPathType, segmentation_folder_path: FolderPathType
 ) -> dict or None:
@@ -168,14 +169,12 @@ class IntoTheVoidNWBConverter(NWBConverter):
         imaging_interface = self.data_interface_objects["Imaging"]
         imaging_timestamps = imaging_interface.data_interface_objects["BrukerImaging"].get_timestamps()
 
-
         behavior_interface = self.data_interface_objects["BehaviorViRMEN"]
         behavior_timestamps = behavior_interface.get_timestamps()
 
         two_photon_ttl = behavior_interface._get_time_series("twop")
         rising_frames = get_rising_frames_from_ttl(trace=two_photon_ttl)
-        #two_photon_times = timestamps[rising_frames]
-
+        # two_photon_times = timestamps[rising_frames]
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)

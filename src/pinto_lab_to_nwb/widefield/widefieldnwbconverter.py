@@ -89,6 +89,5 @@ class WideFieldNWBConverter(NWBConverter):
         # For violet the interpolation doesn't work yet, the first 8 values are 0.0 after interpolation
         violet_interface = self.data_interface_objects["ImagingViolet"]
         violet_interface.align_by_interpolation(
-            aligned_timestamps=blue_frames_timestamps,
-            unaligned_timestamps=violet_interface.imaging_extractor._times
+            aligned_timestamps=blue_frames_timestamps, unaligned_timestamps=violet_interface.imaging_extractor._times
         )
