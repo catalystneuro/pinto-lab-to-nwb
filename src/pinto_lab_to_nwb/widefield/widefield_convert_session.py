@@ -248,9 +248,13 @@ if __name__ == "__main__":
     # Path to the .csv file that contains the predictions from Lightning Pose.
     lightning_pose_csv_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz_heatmap.csv"
     # Path to the original video file (.mp4).
-    lightning_pose_original_video_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz.mp4"
+    lightning_pose_original_video_file_path = (
+        "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz.mp4"
+    )
     # Path to the labeled video file (.mp4).
-    lightning_pose_labeled_video_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz_heatmap_labeled.mp4"
+    lightning_pose_labeled_video_file_path = (
+        "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz_heatmap_labeled.mp4"
+    )
 
     stub_test = False
 
