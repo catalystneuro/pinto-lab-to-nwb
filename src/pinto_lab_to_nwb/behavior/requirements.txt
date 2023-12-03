@@ -1,2 +1,0 @@
-ndx-events==0.2.0
-pymatreader==0.0.32

@@ -2,3 +2,5 @@ neuroconv
 nwbwidgets
 nwbinspector
 ndx-pinto-metadata==0.1.2
+ndx-events==0.2.0
+pymatreader==0.0.32
