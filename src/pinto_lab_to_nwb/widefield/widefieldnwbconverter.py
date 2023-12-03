@@ -4,10 +4,13 @@ from typing import Optional, Dict
 
 import numpy as np
 from natsort import natsorted
+from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
 from pynwb import NWBFile
 
 from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENWidefieldTimeAlignedBehaviorInterface
+from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
+from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
 from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldImagingInterface,
     WidefieldProcessedImagingInterface,
@@ -15,8 +18,6 @@ from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldSegmentationImagesBlueInterface,
     WidefieldSegmentationImagesVioletInterface,
 )
-from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
-from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
 
 
 class WideFieldNWBConverter(NWBConverter):
@@ -47,6 +48,10 @@ class WideFieldNWBConverter(NWBConverter):
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
+
+        # Add subject (from extension)
+        if metadata["SubjectExtension"] is not None:
+            nwbfile.subject = SubjectExtension(**metadata["SubjectExtension"])
 
         # Add motion correction for blue and violet frames
         imaging_interface_names = ["ImagingBlue", "ImagingViolet"]

@@ -23,7 +23,6 @@ def session_to_nwb(
     segmentation_to_imaging_plane_map: dict = None,
     subject_metadata_file_path: Optional[FilePathType] = None,
     virmen_file_path: Optional[FilePathType] = None,
-    behavior_timestamps_file_path: Optional[FilePathType] = None,
     stub_test: bool = False,
 ):
     """
@@ -55,9 +54,7 @@ def session_to_nwb(
         imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
-        virmen_file_path=virmen_file_path,
-        behavior_timestamps_file_path=behavior_timestamps_file_path,
-        verbose=False,
+        verbose=True,
     )
 
     conversion_options = {
@@ -92,6 +89,9 @@ def session_to_nwb(
                 subject_id=groups_dict["subject_id"], subject_metadata_file_path=subject_metadata_file_path
             )
             metadata = dict_deep_update(metadata, subject_metadata)
+
+    # Separate subject metadata from NWBFile metadata to add SubjectExtension
+    metadata["SubjectExtension"] = metadata.pop("Subject", None)
 
     # Run conversion
     converter.run_conversion(
