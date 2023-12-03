@@ -28,6 +28,9 @@ def session_to_nwb(
     binned_vasculature_mask_file_path: FilePathType,
     binned_blue_pca_mask_file_path: FilePathType,
     binned_violet_pca_mask_file_path: FilePathType,
+    lightning_pose_csv_file_path: Optional[FilePathType] = None,
+    lightning_pose_original_video_file_path: Optional[FilePathType] = None,
+    lightning_pose_labeled_video_file_path: Optional[FilePathType] = None,
     subject_metadata_file_path: Optional[FilePathType] = None,
     stub_test: bool = False,
 ):
@@ -58,6 +61,12 @@ def session_to_nwb(
         The file path that contains the PCA mask for the blue channel.
     binned_violet_pca_mask_file_path: FilePathType
         The file path that contains the PCA mask for the violet channel.
+    lightning_pose_csv_file_path: FilePathType, optional
+        The file path to the lightning pose csv file.
+    lightning_pose_original_video_file_path: FilePathType, optional
+        The file path to the lightning pose original video file. (.mp4 file)
+    lightning_pose_labeled_video_file_path: FilePathType, optional
+        The file path to the lightning pose labeled video file. (.mp4 file)
     subject_metadata_file_path: FilePathType, optional
         The file path to the subject metadata file. This file should contain the 'metadata' key.
     stub_test: bool, optional
@@ -143,6 +152,23 @@ def session_to_nwb(
         )
     )
 
+    if lightning_pose_csv_file_path:
+        lightning_pose_source_data = dict(
+            file_path=str(lightning_pose_csv_file_path),
+            original_video_file_path=str(lightning_pose_original_video_file_path),
+            labeled_video_file_path=str(lightning_pose_labeled_video_file_path),
+        )
+        source_data.update(dict(EyeTracking=lightning_pose_source_data))
+
+        conversion_options.update(
+            dict(
+                EyeTracking=dict(
+                    stub_test=stub_test,
+                    reference_frame="(0,0) corresponds to the top left corner of the video.",
+                )
+            )
+        )
+
     converter = WideFieldNWBConverter(source_data=source_data)
 
     # Add datetime to conversion
@@ -217,7 +243,14 @@ if __name__ == "__main__":
 
     subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
     # The file path to the NWB file that will be created.
-    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/DrChicken_20230419_20hz.nwb")
+
+    # Parameters for eye tracking
+    # Path to the .csv file that contains the predictions from Lightning Pose.
+    lightning_pose_csv_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz_heatmap.csv"
+    # Path to the original video file (.mp4).
+    lightning_pose_original_video_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz.mp4"
+    # Path to the labeled video file (.mp4).
+    lightning_pose_labeled_video_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz_heatmap_labeled.mp4"
 
     stub_test = False
 
@@ -234,6 +267,9 @@ if __name__ == "__main__":
         binned_vasculature_mask_file_path=binned_vasculature_mask_file_path,
         binned_blue_pca_mask_file_path=binned_blue_pca_mask_file_path,
         binned_violet_pca_mask_file_path=binned_violet_pca_mask_file_path,
+        lightning_pose_csv_file_path=lightning_pose_csv_file_path,
+        lightning_pose_original_video_file_path=lightning_pose_original_video_file_path,
+        lightning_pose_labeled_video_file_path=lightning_pose_labeled_video_file_path,
         subject_metadata_file_path=subject_metadata_file_path,
         stub_test=stub_test,
     )
