@@ -1,4 +1,6 @@
 """Primary class for converting experiment-specific behavior."""
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import scipy
@@ -29,18 +31,23 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         self._mat_dict = read_mat(filename=file_path)
         self._times = None
 
+    def _get_session_start_time(self):
+        session = self._mat_dict["session"]
+        format_string = "%m/%d/%Y %I:%M:%S %p"
+        date_from_mat = f"{session['date']} {session['time']}"
+        session_start_time = datetime.strptime(date_from_mat, format_string)
+        return session_start_time
+
     def get_metadata(self):
         metadata = super().get_metadata()
 
         session = self._mat_dict["session"]
         experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
-        # format_string = "%m/%d/%Y %I:%M:%S %p"
-        # date_from_mat = f"{session['date']} {session['time']}"
-        # session_start_time = datetime.strptime(date_from_mat, format_string)
+        session_start_time = self._get_session_start_time()
 
         metadata_from_mat_dict = dict(
             Subject=dict(subject_id=session["animal"]),
-            NWBFile=dict(experimenter=experimenter),
+            NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
         )
 
         metadata = dict_deep_update(metadata, metadata_from_mat_dict)
@@ -124,7 +131,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             experiment_code=experiment_code,
             session_index=session["sessionIndex"],
             total_reward=session["totalReward"],
-            surface_quality=session["squal"],
+            surface_quality=float(session["squal"]),
             rig=session["rig"],
             num_trials=session["nTrials"],
             num_iterations=session["nIterations"],
