@@ -227,6 +227,8 @@ def session_to_nwb(
             )
             metadata = dict_deep_update(metadata, subject_metadata)
 
+    # Separate subject metadata from NWBFile metadata to add SubjectExtension
+    metadata["SubjectExtension"] = metadata.pop("Subject", None)
     # Run conversion
     converter.run_conversion(
         nwbfile_path=nwbfile_path, metadata=metadata, overwrite=True, conversion_options=conversion_options

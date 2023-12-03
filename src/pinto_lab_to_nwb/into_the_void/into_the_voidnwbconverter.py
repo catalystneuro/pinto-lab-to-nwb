@@ -1,10 +1,12 @@
 """Primary NWBConverter class for this dataset."""
 from typing import Optional
 
+from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
-from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
+from neuroconv.utils import FolderPathType, DeepDict
+from pynwb import NWBFile
 
 
 def get_default_segmentation_to_imaging_name_mapping(
@@ -150,3 +152,10 @@ class IntoTheVoidNWBConverter(NWBConverter):
             metadata["Ophys"]["ImagingPlane"][metadata_ind]["device"] = device_name
 
         return metadata
+
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
+        super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
+
+        # Add subject (from extension)
+        if metadata["SubjectExtension"] is not None:
+            nwbfile.subject = SubjectExtension(**metadata["SubjectExtension"])
