@@ -5,9 +5,9 @@ from typing import Optional, Dict
 import numpy as np
 from natsort import natsorted
 from neuroconv import NWBConverter
+from neuroconv.converters import LightningPoseConverter
 from pynwb import NWBFile
 
-from pinto_lab_to_nwb.widefield.interfaces import WidefieldImagingInterface, WidefieldProcessedImagingInterface
 from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
 from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
 from pinto_lab_to_nwb.widefield.interfaces import (
@@ -30,6 +30,7 @@ class WideFieldNWBConverter(NWBConverter):
         SegmentationProcessedBlue=WidefieldProcessedSegmentationinterface,
         SummaryImagesBlue=WidefieldSegmentationImagesBlueInterface,
         SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
+        EyeTracking=LightningPoseConverter,
     )
 
     def __init__(self, source_data: Dict[str, dict], verbose: bool = True):
