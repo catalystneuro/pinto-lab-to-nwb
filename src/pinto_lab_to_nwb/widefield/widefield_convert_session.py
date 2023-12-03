@@ -41,7 +41,7 @@ def session_to_nwb(
     widefield_imaging_folder_path: FolderPathType
         The folder path that contains the Micro-Manager OME-TIF imaging output (.ome.tif files).
     strobe_sequence_file_path: FilePathType
-            The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
+        The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
     info_file_path: FilePathType
         The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
     vasculature_mask_file_path: FilePathType
