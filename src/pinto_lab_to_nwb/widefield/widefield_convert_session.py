@@ -183,11 +183,12 @@ def session_to_nwb(
         aligned_timestamps = sync_data["im_frame_timestamps"].values
         lightning_pose_converter = converter.data_interface_objects["EyeTracking"]
         pose_estimation_interface = lightning_pose_converter.data_interface_objects["PoseEstimation"]
-        original_timestamps = pose_estimation_interface.get_original_timestamps()
-        # the timestamps in the sync_data is one frame longer than the original timestamps
-        aligned_timestamps = aligned_timestamps[:len(original_timestamps)]
-        assert len(aligned_timestamps) == len(original_timestamps), "The length of the aligned timestamps must match the length of the original timestamps."
         pose_estimation_interface.set_aligned_timestamps(aligned_timestamps=aligned_timestamps)
+        lightning_pose_converter.data_interface_objects["OriginalVideo"].set_aligned_timestamps(aligned_timestamps=[aligned_timestamps])
+        if "LabeledVideo" in lightning_pose_converter.data_interface_objects:
+            lightning_pose_converter.data_interface_objects["LabeledVideo"].set_aligned_timestamps(
+                aligned_timestamps=[aligned_timestamps]
+            )
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
