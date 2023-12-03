@@ -208,7 +208,7 @@ if __name__ == "__main__":
     # Parameters for conversion
 
     # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
-    #imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
+    # imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
     imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
     # The file path to the strobe sequence file.
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
@@ -222,14 +222,14 @@ if __name__ == "__main__":
     vasculature_mask_file_path = imaging_folder_path / "vasculature_mask_2.mat"
 
     # The file path that contains the manual mask on the full size session image (blue channel).
-    #manual_mask_file_path = imaging_folder_path / "reg_manual_mask_jlt6316_Cherry_20230802_1_1_1.mat"
+    # manual_mask_file_path = imaging_folder_path / "reg_manual_mask_jlt6316_Cherry_20230802_1_1_1.mat"
     manual_mask_file_path = imaging_folder_path / "regManualMask.mat"
     # The name of the struct in the manual mask file that contains the manual mask (e.g. "regMask" or "reg_manual_mask").
-    #manual_mask_struct_name = "reg_manual_mask"
+    # manual_mask_struct_name = "reg_manual_mask"
     manual_mask_struct_name = "regMask"
 
     # The file path that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
-    #roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef_1.mat"
+    # roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef_1.mat"
     roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef.mat"
 
     # The file path that contains the contrast based vasculature mask on the downsampled (binned) session image (blue channel).

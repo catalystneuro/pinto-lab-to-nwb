@@ -25,7 +25,9 @@ class WidefieldSegmentationImagesVioletInterface(BaseDataInterface):
         """
         super().__init__(violet_pca_mask_file_path=violet_pca_mask_file_path)
         self.violet_pca_mask_file_path = Path(violet_pca_mask_file_path)
-        assert self.violet_pca_mask_file_path.exists(), f"The violet channel PCA mask file '{violet_pca_mask_file_path}' does not exist."
+        assert (
+            self.violet_pca_mask_file_path.exists()
+        ), f"The violet channel PCA mask file '{violet_pca_mask_file_path}' does not exist."
         self.verbose = verbose
 
         self._image_pca_violet = self._load_pca_mask()

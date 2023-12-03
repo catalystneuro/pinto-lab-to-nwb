@@ -14,11 +14,11 @@ class WidefieldSegmentationImagesBlueInterface(BaseDataInterface):
     """The custom interface to add the blue channel manual and vasculature mask to the NWBFile."""
 
     def __init__(
-            self,
-            vasculature_mask_file_path: FilePathType,
-            manual_mask_file_path: FilePathType,
-            manual_mask_struct_name: str,
-            verbose: bool = True,
+        self,
+        vasculature_mask_file_path: FilePathType,
+        manual_mask_file_path: FilePathType,
+        manual_mask_struct_name: str,
+        verbose: bool = True,
     ):
         """
         The interface to add the summary images to the NWBFile.
@@ -35,7 +35,9 @@ class WidefieldSegmentationImagesBlueInterface(BaseDataInterface):
         """
         super().__init__(vasculature_mask_file_path=vasculature_mask_file_path)
         self.vasculature_mask_file_path = Path(vasculature_mask_file_path)
-        assert self.vasculature_mask_file_path.exists(), f"The vasculature mask file '{vasculature_mask_file_path}' does not exist."
+        assert (
+            self.vasculature_mask_file_path.exists()
+        ), f"The vasculature mask file '{vasculature_mask_file_path}' does not exist."
 
         self.manual_mask_file_path = Path(manual_mask_file_path)
         assert self.manual_mask_file_path.exists(), f"The manual mask file '{manual_mask_file_path}' does not exist."
@@ -49,14 +51,18 @@ class WidefieldSegmentationImagesBlueInterface(BaseDataInterface):
 
     def _load_vasculature_mask(self) -> np.ndarray:
         vasculature_mask_mat = read_mat(str(self.vasculature_mask_file_path))
-        assert "mask" in vasculature_mask_mat, f"The vasculature mask is missing from {self.vasculature_mask_file_path}."
+        assert (
+            "mask" in vasculature_mask_mat
+        ), f"The vasculature mask is missing from {self.vasculature_mask_file_path}."
         vasculature_mask = vasculature_mask_mat["mask"]
 
         return vasculature_mask
 
     def _load_manual_mask(self):
         manual_mask_mat = read_mat(self.manual_mask_file_path)
-        assert self.manual_mask_struct_name in manual_mask_mat, f"The manual mask is missing from {self.manual_mask_file_path}."
+        assert (
+            self.manual_mask_struct_name in manual_mask_mat
+        ), f"The manual mask is missing from {self.manual_mask_file_path}."
         manual_mask = manual_mask_mat[self.manual_mask_struct_name]
 
         return manual_mask
