@@ -178,11 +178,19 @@ def session_to_nwb(
     # Set aligned timestamps for LightningPose
     if "EyeTracking" in converter.data_interface_objects:
         if sync_data_file_path is None:
-            raise ValueError("'sync_data_file_path' must be provided when pose estimation data is added to the NWB file.")
+            raise ValueError(
+                "'sync_data_file_path' must be provided when pose estimation data is added to the NWB file."
+            )
         sync_data = pd.read_csv(sync_data_file_path)
         aligned_timestamps = sync_data["im_frame_timestamps"].values
         lightning_pose_converter = converter.data_interface_objects["EyeTracking"]
         pose_estimation_interface = lightning_pose_converter.data_interface_objects["PoseEstimation"]
+        original_timestamps = pose_estimation_interface.get_original_timestamps()
+        # the timestamps in the sync_data is one frame longer than the original timestamps
+        aligned_timestamps = aligned_timestamps[: len(original_timestamps)]
+        assert len(aligned_timestamps) == len(
+            original_timestamps
+        ), "The length of the aligned timestamps must match the length of the original timestamps."
         pose_estimation_interface.set_aligned_timestamps(aligned_timestamps=aligned_timestamps)
         lightning_pose_converter.data_interface_objects["OriginalVideo"].set_aligned_timestamps(aligned_timestamps=[aligned_timestamps])
         if "LabeledVideo" in lightning_pose_converter.data_interface_objects:
@@ -228,7 +236,7 @@ if __name__ == "__main__":
 
     # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
     imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
-    #imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
+    # imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
     # The file path to the strobe sequence file.
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
     # The file path to the downsampled imaging data in Matlab format (.mat file).
@@ -249,7 +257,7 @@ if __name__ == "__main__":
 
     # The file path that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
     roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef_1.mat"
-    #roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef.mat"
+    # roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef.mat"
 
     # The file path that contains the contrast based vasculature mask on the downsampled (binned) session image (blue channel).
     binned_vasculature_mask_file_path = imaging_folder_path / "vasculature_mask_2.mat"
