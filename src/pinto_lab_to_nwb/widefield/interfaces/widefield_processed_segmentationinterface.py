@@ -16,12 +16,13 @@ class WidefieldProcessedSegmentationinterface(BaseSegmentationExtractorInterface
     Extractor = WidefieldProcessedSegmentationExtractor
 
     def __init__(
-            self,
-            info_mat_file_path: FilePathType,
-            roi_from_ref_mat_file_path: FilePathType,
-            vasculature_mask_file_path: FilePathType,
-            blue_pca_mask_file_path: FilePathType,
-            verbose: bool = True):
+        self,
+        info_mat_file_path: FilePathType,
+        roi_from_ref_mat_file_path: FilePathType,
+        vasculature_mask_file_path: FilePathType,
+        blue_pca_mask_file_path: FilePathType,
+        verbose: bool = True,
+    ):
         """
 
         Parameters
