@@ -21,6 +21,13 @@ def session_to_nwb(
     strobe_sequence_file_path: FilePathType,
     processed_imaging_file_path: FilePathType,
     info_file_path: FilePathType,
+    vasculature_mask_file_path: FilePathType,
+    manual_mask_file_path: FilePathType,
+    manual_mask_struct_name: str,
+    roi_from_ref_mat_file_path: FilePathType,
+    binned_vasculature_mask_file_path: FilePathType,
+    binned_blue_pca_mask_file_path: FilePathType,
+    binned_violet_pca_mask_file_path: FilePathType,
     subject_metadata_file_path: Optional[FilePathType] = None,
     stub_test: bool = False,
 ):
@@ -34,9 +41,23 @@ def session_to_nwb(
     widefield_imaging_folder_path: FolderPathType
         The folder path that contains the Micro-Manager OME-TIF imaging output (.ome.tif files).
     strobe_sequence_file_path: FilePathType
-            The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
+        The file path to the strobe sequence file. This file should contain the 'strobe_session_key' key.
     info_file_path: FilePathType
         The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
+    vasculature_mask_file_path: FilePathType
+        The file path that contains the contrast based vasculature mask on the full size session image (blue channel).
+    manual_mask_file_path: FilePathType
+        The file path that contains the manual mask on the full size session image (blue channel).
+    manual_mask_struct_name: str
+        The name of the struct in the manual mask file that contains the manual mask (e.g. "regMask" or "reg_manual_mask").
+    roi_from_ref_mat_file_path: FilePathType
+        The file path that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
+    binned_vasculature_mask_file_path: FilePathType
+        The file path that contains the contrast based vasculature mask on the downsampled (binned) session image (blue channel).
+    binned_blue_pca_mask_file_path: FilePathType
+        The file path that contains the PCA mask for the blue channel.
+    binned_violet_pca_mask_file_path: FilePathType
+        The file path that contains the PCA mask for the violet channel.
     subject_metadata_file_path: FilePathType, optional
         The file path to the subject metadata file. This file should contain the 'metadata' key.
     stub_test: bool, optional
@@ -106,13 +127,18 @@ def session_to_nwb(
     source_data.update(
         dict(
             SegmentationProcessedBlue=dict(
-                folder_path=str(widefield_imaging_folder_path),
+                info_mat_file_path=str(info_file_path),
+                roi_from_ref_mat_file_path=str(roi_from_ref_mat_file_path),
+                vasculature_mask_file_path=str(binned_vasculature_mask_file_path),
+                blue_pca_mask_file_path=str(binned_blue_pca_mask_file_path),
             ),
             SummaryImagesBlue=dict(
-                folder_path=str(widefield_imaging_folder_path),
+                vasculature_mask_file_path=str(vasculature_mask_file_path),
+                manual_mask_file_path=str(manual_mask_file_path),
+                manual_mask_struct_name=manual_mask_struct_name,
             ),
             SummaryImagesViolet=dict(
-                folder_path=str(widefield_imaging_folder_path),
+                violet_pca_mask_file_path=str(binned_violet_pca_mask_file_path),
             ),
         )
     )
@@ -156,13 +182,39 @@ if __name__ == "__main__":
     # Parameters for conversion
 
     # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
-    imaging_folder_path = Path("/Users/weian/data/DrChicken_20230419_20hz")
+    # imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
+    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
     # The file path to the strobe sequence file.
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
     # The file path to the downsampled imaging data in Matlab format (.mat file).
     processed_imaging_path = imaging_folder_path / "rawf_full.mat"
     # The file path to the Matlab file with information about the imaging session (e.g. 'frameRate').
     info_file_path = imaging_folder_path / "info.mat"
+
+    # Parameters for custom segmentation and summary images
+    # The file path that contains the contrast based vasculature mask on the full size session image (blue channel).
+    vasculature_mask_file_path = imaging_folder_path / "vasculature_mask_2.mat"
+
+    # The file path that contains the manual mask on the full size session image (blue channel).
+    # manual_mask_file_path = imaging_folder_path / "reg_manual_mask_jlt6316_Cherry_20230802_1_1_1.mat"
+    manual_mask_file_path = imaging_folder_path / "regManualMask.mat"
+    # The name of the struct in the manual mask file that contains the manual mask (e.g. "regMask" or "reg_manual_mask").
+    # manual_mask_struct_name = "reg_manual_mask"
+    manual_mask_struct_name = "regMask"
+
+    # The file path that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
+    # roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef_1.mat"
+    roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef.mat"
+
+    # The file path that contains the contrast based vasculature mask on the downsampled (binned) session image (blue channel).
+    binned_vasculature_mask_file_path = imaging_folder_path / "vasculature_mask_2.mat"
+
+    # The file path that contains the PCA mask for the blue channel.
+    binned_blue_pca_mask_file_path = imaging_folder_path / "blue_pca_vasculature_mask_2.mat"
+
+    # The file path that contains the PCA mask for the violet channel.
+    binned_violet_pca_mask_file_path = imaging_folder_path / "violet_pca_vasculature_mask_2.mat"
+
     subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
     # The file path to the NWB file that will be created.
     nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/DrChicken_20230419_20hz.nwb")
@@ -175,6 +227,13 @@ if __name__ == "__main__":
         strobe_sequence_file_path=strobe_sequence_file_path,
         processed_imaging_file_path=processed_imaging_path,
         info_file_path=info_file_path,
+        vasculature_mask_file_path=vasculature_mask_file_path,
+        manual_mask_file_path=manual_mask_file_path,
+        manual_mask_struct_name=manual_mask_struct_name,
+        roi_from_ref_mat_file_path=roi_from_ref_mat_file_path,
+        binned_vasculature_mask_file_path=binned_vasculature_mask_file_path,
+        binned_blue_pca_mask_file_path=binned_blue_pca_mask_file_path,
+        binned_violet_pca_mask_file_path=binned_violet_pca_mask_file_path,
         subject_metadata_file_path=subject_metadata_file_path,
         stub_test=stub_test,
     )
