@@ -192,7 +192,9 @@ def session_to_nwb(
             original_timestamps
         ), "The length of the aligned timestamps must match the length of the original timestamps."
         pose_estimation_interface.set_aligned_timestamps(aligned_timestamps=aligned_timestamps)
-        lightning_pose_converter.data_interface_objects["OriginalVideo"].set_aligned_timestamps(aligned_timestamps=[aligned_timestamps])
+        lightning_pose_converter.data_interface_objects["OriginalVideo"].set_aligned_timestamps(
+            aligned_timestamps=[aligned_timestamps]
+        )
         if "LabeledVideo" in lightning_pose_converter.data_interface_objects:
             lightning_pose_converter.data_interface_objects["LabeledVideo"].set_aligned_timestamps(
                 aligned_timestamps=[aligned_timestamps]
