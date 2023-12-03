@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from neuroconv import BaseDataInterface
 from neuroconv.tools import get_module
-from neuroconv.utils import FolderPathType
+from neuroconv.utils import FolderPathType, FilePathType
 from pymatreader import read_mat
 from pynwb import NWBFile
 from pynwb.base import Images
@@ -13,37 +13,51 @@ from pynwb.image import GrayscaleImage
 class WidefieldSegmentationImagesBlueInterface(BaseDataInterface):
     """The custom interface to add the blue channel manual and vasculature mask to the NWBFile."""
 
-    def __init__(self, folder_path: FolderPathType, verbose: bool = True):
+    def __init__(
+            self,
+            vasculature_mask_file_path: FilePathType,
+            manual_mask_file_path: FilePathType,
+            manual_mask_struct_name: str,
+            verbose: bool = True,
+    ):
         """
         The interface to add the summary images to the NWBFile.
 
         Parameters
         ----------
-        folder_path : FolderPathType
+        vasculature_mask_file_path : FilePathType
+            The file path to the vasculature mask file.
+        manual_mask_file_path : FilePathType
+            The file path to the manual mask file.
+        manual_mask_struct_name: str
+            The name of the struct in the manual mask file that contains the manual mask (e.g. "regMask" or "reg_manual_mask").
         verbose : bool, default: True
         """
-        super().__init__(folder_path=folder_path)
-        self.folder_path = Path(folder_path)
+        super().__init__(vasculature_mask_file_path=vasculature_mask_file_path)
+        self.vasculature_mask_file_path = Path(vasculature_mask_file_path)
+        assert self.vasculature_mask_file_path.exists(), f"The vasculature mask file '{vasculature_mask_file_path}' does not exist."
+
+        self.manual_mask_file_path = Path(manual_mask_file_path)
+        assert self.manual_mask_file_path.exists(), f"The manual mask file '{manual_mask_file_path}' does not exist."
+
+        self.manual_mask_struct_name = manual_mask_struct_name
+
         self.verbose = verbose
 
         self._image_vasculature = self._load_vasculature_mask()
         self._image_manual = self._load_manual_mask()
 
     def _load_vasculature_mask(self) -> np.ndarray:
-        vasculature_mask_file_path = self.folder_path / "vasculature_mask_2.mat"
-        assert vasculature_mask_file_path.exists(), f"The vasculature mask file is missing from {self.folder_path}."
-        vasculature_mask_mat = read_mat(str(vasculature_mask_file_path))
-        assert "mask" in vasculature_mask_mat, f"The vasculature mask is missing from {vasculature_mask_file_path}."
+        vasculature_mask_mat = read_mat(str(self.vasculature_mask_file_path))
+        assert "mask" in vasculature_mask_mat, f"The vasculature mask is missing from {self.vasculature_mask_file_path}."
         vasculature_mask = vasculature_mask_mat["mask"]
 
         return vasculature_mask
 
     def _load_manual_mask(self):
-        manual_mask_file_path = Path(self.folder_path) / "regManualMask.mat"
-        assert manual_mask_file_path.exists(), f"The manual mask file is missing from {self.folder_path}."
-        manual_mask_mat = read_mat(str(manual_mask_file_path))
-        assert "regMask" in manual_mask_mat, f"The manual mask is missing from {manual_mask_file_path}."
-        manual_mask = manual_mask_mat["regMask"]
+        manual_mask_mat = read_mat(self.manual_mask_file_path)
+        assert self.manual_mask_struct_name in manual_mask_mat, f"The manual mask is missing from {self.manual_mask_file_path}."
+        manual_mask = manual_mask_mat[self.manual_mask_struct_name]
 
         return manual_mask
 

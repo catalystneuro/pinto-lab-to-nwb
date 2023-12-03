@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from neuroconv import BaseDataInterface
 from neuroconv.tools import get_module
-from neuroconv.utils import FolderPathType
+from neuroconv.utils import FilePathType
 from pymatreader import read_mat
 from pynwb import NWBFile
 from pynwb.base import Images
@@ -13,28 +13,26 @@ from pynwb.image import GrayscaleImage
 class WidefieldSegmentationImagesVioletInterface(BaseDataInterface):
     """The custom interface to add the violet channel PCA mask to the NWBFile."""
 
-    def __init__(self, folder_path: FolderPathType, verbose: bool = True):
+    def __init__(self, violet_pca_mask_file_path: FilePathType, verbose: bool = True):
         """
         The interface to add the summary images to the NWBFile.
 
         Parameters
         ----------
-        folder_path : FolderPathType
+        violet_pca_mask_file_path : FilePathType
+            The file path to the violet channel PCA mask file.
         verbose : bool, default: True
         """
-        super().__init__(folder_path=folder_path)
-        self.folder_path = Path(folder_path)
+        super().__init__(violet_pca_mask_file_path=violet_pca_mask_file_path)
+        self.violet_pca_mask_file_path = Path(violet_pca_mask_file_path)
+        assert self.violet_pca_mask_file_path.exists(), f"The violet channel PCA mask file '{violet_pca_mask_file_path}' does not exist."
         self.verbose = verbose
 
         self._image_pca_violet = self._load_pca_mask()
 
     def _load_pca_mask(self) -> np.ndarray:
-        pca_mask_file_path = self.folder_path / "violet_pca_vasculature_mask_2.mat"
-        assert (
-            pca_mask_file_path.exists()
-        ), f"The PCA mask file for the violet channel is missing from {self.folder_path}."
-        pca_mask_violet = read_mat(str(pca_mask_file_path))
-        assert "vasc_mask" in pca_mask_violet, f"Could not find 'vasc_mask' in 'violet_pca_vasculature_mask_2.mat'."
+        pca_mask_violet = read_mat(str(self.violet_pca_mask_file_path))
+        assert "vasc_mask" in pca_mask_violet, f"Could not find 'vasc_mask' in '{self.violet_pca_mask_file_path}'."
         pca_mask = pca_mask_violet["vasc_mask"]
 
         return pca_mask
