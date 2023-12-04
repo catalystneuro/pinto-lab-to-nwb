@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-from neuroconv.utils import FolderPathType
+from neuroconv.utils import FolderPathType, FilePathType
 from pymatreader import read_mat
 from roiextractors import SegmentationExtractor
 
@@ -15,7 +15,10 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
 
     def __init__(
         self,
-        folder_path: FolderPathType,
+        info_mat_file_path: FilePathType,
+        roi_from_ref_mat_file_path: FilePathType,
+        vasculature_mask_file_path: FilePathType,
+        blue_pca_mask_file_path: FilePathType,
     ):
         """
         The SegmentationExtractor for the downsampled (binned) Widefield imaging data.
@@ -25,7 +28,6 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
         - ROIfromRef.mat     : contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
         - vasculature_mask_2.mat : contains the vasculature mask on the downsampled (binned) session image.
         - blue_pca_vasculature_mask_2.mat : contains the PCA mask for the blue channel.
-        - violet_pca_vasculature_mask_2.mat.mat : contains the PCA mask for the violet channel.
 
          that contain the following variables:
         - The Allen area label for each binned pixel
@@ -34,33 +36,28 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
 
         Parameters
         ----------
-        folder_path: FolderPathType
-            The path that points to the folder that contains the .mat files.
+        info_mat_file_path : FilePathType
+            The file path to the 'info.mat' file.
+        roi_from_ref_mat_file_path : FilePathType
+            The file that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
+        vasculature_mask_file_path: FilePathType
+            The file that contains the vasculature mask on the downsampled (binned) session image.
+        blue_pca_mask_file_path: FilePathType
+            The file that contains the PCA mask for the blue channel.
         """
         super().__init__()
 
-        self.folder_path = Path(folder_path)
+        info_mat_file_path = Path(info_mat_file_path)
+        assert info_mat_file_path.exists(), f"The file '{info_mat_file_path}' does not exist."
 
-        expected_files = [
-            "info.mat",
-            "ROIfromRef.mat",
-            "vasculature_mask_2.mat",
-            "blue_pca_vasculature_mask_2.mat",
-        ]
-        mat_file_paths = list(self.folder_path.glob("*.mat"))
-        assert mat_file_paths, f"The .mat files are missing from {folder_path}."
-        # assert all expected files are in the folder_path
-        for expected_file in expected_files:
-            assert (
-                self.folder_path / expected_file
-            ).exists(), f"The file {expected_file} is missing from {folder_path}."
-
-        info_mat = read_mat(self.folder_path / "info.mat")
+        info_mat = read_mat(str(info_mat_file_path))
         assert "info" in info_mat, f"Could not find 'info' struct in 'info.mat'."
         self._num_frames = info_mat["info"]["numFrames"]
         self._sampling_frequency = info_mat["info"]["frameRate"]
 
-        roi_mat = read_mat(self.folder_path / "ROIfromRef.mat")
+        roi_from_ref_mat_file_path = Path(roi_from_ref_mat_file_path)
+        assert roi_from_ref_mat_file_path.exists(), f"The file '{roi_from_ref_mat_file_path}' does not exist."
+        roi_mat = read_mat(str(roi_from_ref_mat_file_path))
         assert "ROIcentroids" in roi_mat, f"Could not find 'ROIcentroids' in 'ROIfromRef.mat'."
         self._roi_locations = roi_mat[
             "ROIcentroids"
@@ -78,12 +75,16 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
         self._dtype = self._image_masks.dtype
 
         # Contrast based vasculature mask
-        vasculature_mask = read_mat(self.folder_path / "vasculature_mask_2.mat")
-        assert "mask_binned" in vasculature_mask, f"Could not find 'mask_binned' in 'vasculature_mask_2.mat'."
+        vasculature_mask_file_path = Path(vasculature_mask_file_path)
+        assert vasculature_mask_file_path.exists(), f"The file '{vasculature_mask_file_path}' does not exist."
+        vasculature_mask = read_mat(str(vasculature_mask_file_path))
+        assert "mask_binned" in vasculature_mask, f"Could not find 'mask_binned' in '{vasculature_mask_file_path}'."
         self._image_vasculature = vasculature_mask["mask_binned"]
 
         # PCA mask (separate for blue and violet)
-        pca_mask_blue = read_mat(self.folder_path / f"blue_pca_vasculature_mask_2.mat")
+        blue_pca_mask_file_path = Path(blue_pca_mask_file_path)
+        assert blue_pca_mask_file_path.exists(), f"The file '{blue_pca_mask_file_path}' does not exist."
+        pca_mask_blue = read_mat(str(blue_pca_mask_file_path))
         assert "mask" in pca_mask_blue, f"Could not find 'mask' in 'blue_pca_vasculature_mask_2.mat'."
         self._image_pca_blue = pca_mask_blue["mask"]
 
@@ -92,7 +93,8 @@ class WidefieldProcessedSegmentationExtractor(SegmentationExtractor):
         num_rois = self.get_num_rois()
         image_mask = np.zeros(shape=(*self._image_size, num_rois), dtype=np.uint8)
         for roi_ind, pixel_mask_roi in enumerate(pixel_mask):
-            pixel_mask_roi = pixel_mask_roi[0]
+            if isinstance(pixel_mask_roi, list):
+                pixel_mask_roi = pixel_mask_roi[0]
             if len(pixel_mask_roi) == 0:
                 # there are rois with no pixels
                 continue

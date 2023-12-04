@@ -1,3 +1,4 @@
 neuroconv
 nwbwidgets
 nwbinspector
+ndx-pinto-metadata==0.1.2

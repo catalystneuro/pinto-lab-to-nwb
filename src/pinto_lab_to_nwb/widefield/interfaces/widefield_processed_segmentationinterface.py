@@ -2,7 +2,7 @@ from typing import Optional
 
 from neuroconv.datainterfaces.ophys.basesegmentationextractorinterface import BaseSegmentationExtractorInterface
 from neuroconv.tools import get_module
-from neuroconv.utils import FolderPathType
+from neuroconv.utils import FilePathType
 from pynwb import NWBFile
 
 from pinto_lab_to_nwb.widefield.extractors.widefield_processed_segmentationextractor import (
@@ -15,15 +15,34 @@ class WidefieldProcessedSegmentationinterface(BaseSegmentationExtractorInterface
 
     Extractor = WidefieldProcessedSegmentationExtractor
 
-    def __init__(self, folder_path: FolderPathType, verbose: bool = True):
+    def __init__(
+        self,
+        info_mat_file_path: FilePathType,
+        roi_from_ref_mat_file_path: FilePathType,
+        vasculature_mask_file_path: FilePathType,
+        blue_pca_mask_file_path: FilePathType,
+        verbose: bool = True,
+    ):
         """
 
         Parameters
         ----------
-        folder_path : FolderPathType
+        info_mat_file_path : FilePathType
+            The file path to the 'info.mat' file.
+        roi_from_ref_mat_file_path : FilePathType
+            The file that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
+        vasculature_mask_file_path: FilePathType
+            The file that contains the vasculature mask on the downsampled (binned) session image.
+        blue_pca_mask_file_path: FilePathType
+            The file that contains the PCA mask for the blue channel.
         verbose : bool, default: True
         """
-        super().__init__(folder_path=folder_path)
+        super().__init__(
+            info_mat_file_path=info_mat_file_path,
+            roi_from_ref_mat_file_path=roi_from_ref_mat_file_path,
+            vasculature_mask_file_path=vasculature_mask_file_path,
+            blue_pca_mask_file_path=blue_pca_mask_file_path,
+        )
         self.verbose = verbose
 
     def get_metadata(self) -> dict:
