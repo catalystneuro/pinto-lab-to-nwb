@@ -1,1 +1,2 @@
 neuroconv[suite2p, brukertiff]
+ndx-holographic-stimulation @ git+https://github.com/catalystneuro/ndx-holographic-stimulation.git@include_sister_extension_metadata
