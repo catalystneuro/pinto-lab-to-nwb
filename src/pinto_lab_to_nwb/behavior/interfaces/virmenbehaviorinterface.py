@@ -1,4 +1,5 @@
 """Primary class for converting experiment-specific behavior."""
+import math
 from datetime import datetime
 
 import numpy as np
@@ -70,38 +71,57 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         experiment_code = session["experimentcode"]["function_handle"]["function"]
 
         mazes = session["protocol"].pop("mazes")
-        maze_extension = MazeExtension(
-            name="mazes",
-            description=f"The parameters for the mazes in {experiment_name}.",
-            id=np.arange(len(list(mazes.values())[0])),
-        )
-
-        for maze in mazes:
-            maze_extension.add_column(
-                name=maze,
-                description="maze column",
-                data=mazes[maze],
+        if isinstance(mazes, dict):
+            maze_extension = MazeExtension(
+                name="mazes",
+                description=f"The parameters for the maze in {experiment_name}.",
+                id=[0],
             )
+            for column_name, column_value in mazes.items():
+                maze_extension.add_column(
+                    name=column_name,
+                    description="maze column",
+                    data=[column_value],
+                )
+        else:
+            maze_extension = MazeExtension(
+                name="mazes",
+                description=f"The parameters for the mazes in {experiment_name}.",
+                id=np.arange(len(list(mazes.values())[0])),
+            )
+            for maze in mazes:
+                maze_extension.add_column(
+                    name=maze,
+                    description="maze column",
+                    data=mazes[maze],
+                )
 
         criteria = session["protocol"].pop("criteria")
-        mazes_criteria_df = pd.DataFrame.from_records(criteria)
-        for maze_column in mazes_criteria_df:
-            maze_kwargs = dict(
-                name=maze_column,
-                description="maze information",
-            )
-            if mazes_criteria_df[maze_column].dtype == object:
-                indexed_array, indexed_array_indices = create_indexed_array(mazes_criteria_df[maze_column].values)
-                maze_kwargs.update(
-                    data=list(indexed_array),
-                    index=list(indexed_array_indices),
+        if isinstance(criteria, dict):
+            for column_name, column_value in criteria.items():
+                maze_extension.add_column(
+                    name=column_name,
+                    description="maze information",
+                    data=[column_value],
                 )
-            else:
-                maze_kwargs.update(
-                    data=mazes_criteria_df[maze_column].values.tolist(),
+        else:
+            mazes_criteria_df = pd.DataFrame.from_records(criteria)
+            for maze_column in mazes_criteria_df:
+                maze_kwargs = dict(
+                    name=maze_column,
+                    description="maze information",
                 )
-
-            maze_extension.add_column(**maze_kwargs)
+                if mazes_criteria_df[maze_column].dtype == object:
+                    indexed_array, indexed_array_indices = create_indexed_array(mazes_criteria_df[maze_column].values)
+                    maze_kwargs.update(
+                        data=list(indexed_array),
+                        index=list(indexed_array_indices),
+                    )
+                else:
+                    maze_kwargs.update(
+                        data=mazes_criteria_df[maze_column].values.tolist(),
+                )
+                maze_extension.add_column(**maze_kwargs)
 
         global_settings = session["protocol"].pop("globalSettings")
 
@@ -109,8 +129,10 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         session_protocol = dict_deep_update(session["protocol"], global_settings)
 
         stimulus_code = session_protocol.pop("stimulusGenerator")
-        stimulus_code_str = stimulus_code["function_handle"]["function"]
-        session_protocol.update(stimulus_code=stimulus_code_str)
+        if "function_handle" in stimulus_code:
+            stimulus_code_str = stimulus_code["function_handle"]["function"]
+            session_protocol.update(stimulus_code=stimulus_code_str)
+
         session_protocol.pop("stimulusParameters")
         # Create stimulus protocol with global settings
         stimulus_protocol = DynamicTable(
@@ -123,14 +145,14 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
                 name=column_name,
                 description="stimulus protocol parameter.",
             )
-
         stimulus_protocol.add_row(**session_protocol)
+
         lab_metadata_kwargs = dict(
             name="LabMetaData",
             experiment_name=session["experiment"].replace(".mat", ""),
             experiment_code=experiment_code,
             session_index=session["sessionIndex"],
-            total_reward=session["totalReward"],
+            total_reward=float(session["totalReward"]),
             surface_quality=float(session["squal"]),
             rig=session["rig"],
             num_trials=session["nTrials"],
@@ -153,6 +175,9 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         trial_end_times = behavior_times["EndOfTrial"]
         trial_end_times_flatten = np.squeeze(trial_end_times.toarray())
         num_trials = session["nTrials"]
+
+        if num_trials == 0:
+            return
 
         for trial_ind in range(num_trials):
             nwbfile.add_trial(
@@ -347,22 +372,19 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
 
         # Processed position, velocity, viewAngle
         position_obj = Position(name="Position")
-        view_angle_obj = CompassDirection(name="ViewAngle")
 
-        position = session["position"]  # x,y,z,viewangle
+        position = session["position"]  # x,y,viewangle, z
+        # reference "BehavSync2P.m" script where the position is accessed as:
+        # pos = full(behavdata.session.position(:, [1 2 4]));
+        # pos(:, 3) = -rad2deg(pos(:, 3));
+        if position.shape[1] != 4:
+            raise ValueError(f"Position array is expected to have 4 (x, y, theta, z) dimensions, but has {position.shape[1]} dimensions.")
+        position_data = position[:, [0, 1, 3]]
 
         timestamps = self.get_timestamps()
-        rate = calculate_regular_series_rate(timestamps)
-        if rate:
-            timing_kwargs = dict(rate=rate, starting_time=timestamps[0])
-        else:
-            assert (
+        assert (
                 len(timestamps) == position.shape[0]
-            ), f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
-            timing_kwargs = dict(timestamps=H5DataIO(timestamps, compression="gzip"))
-
-        position_data = position[:, :-1]
-        view_angle_data = position[:, -1]
+        ), f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
 
         # For the position, our convention across tasks and mazes is that position (0,0) is the start of the "sample"
         # region (also referred to as the "cue" region) (note that this is not the position where the mouse starts
@@ -375,20 +397,49 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             description="The x, y, z position of the animal by ViRMEN iteration.",
             reference_frame=reference_frame,
             conversion=0.01,
-            **timing_kwargs,
+            timestamps=H5DataIO(timestamps, compression="gzip")
         )
 
+        behavior = get_module(nwbfile, "behavior", "contains processed behavioral data")
+        behavior.add(position_obj)
+
+    def add_view_angle(self, nwbfile: NWBFile):
+
+        session = self._mat_dict["session"]
+        position = session["position"]
+        # convert radians to degrees
+        # and do the negative sign here as in # pos(:, 3) = -rad2deg(pos(:, 3));
+        non_zero_view_angle = any(x != 0 for x in position[:, 2])
+        if not non_zero_view_angle:
+            return
+
+        behavior = get_module(nwbfile, "behavior")
+        spatial_series = behavior["Position"]["SpatialSeries"]
+        view_angle_data = [-math.degrees(angle) for angle in position[:, 2]]
+
+        view_angle_obj = CompassDirection(name="ViewAngle")
         view_angle_obj.create_spatial_series(
             name="PositionViewAngle",
             data=H5DataIO(view_angle_data, compression="gzip"),
-            description="The view angle of the animal by ViRMEN iteration.",
-            reference_frame=reference_frame,
-            **timing_kwargs,
+            description="The view angle of the animal by ViRMEN iteration in the unit of degrees.",
+            reference_frame=spatial_series.reference_frame,
+            unit="degrees",
+            timestamps=spatial_series,
         )
 
+        behavior.add(view_angle_obj)
+
+    def add_velocity(self, nwbfile: NWBFile):
+
+        session = self._mat_dict["session"]
         velocity = session["velocity"]
-        velocity_data = velocity[:, :2]
-        view_angle_velocity_data = velocity_data[:, -1]
+        # reference "BehavSync2P.m" script where the velocity is accessed as:
+        # vel = full(behavdata.session.velocity(:, [1 2 4]));
+        # vel(:, 3)      = -rad2deg(vel(:, 3));
+        velocity_data = velocity[:, [0, 1, 3]]
+
+        behavior = get_module(nwbfile, "behavior")
+        spatial_series = behavior["Position"]["SpatialSeries"]
 
         velocity_ts = TimeSeries(
             name="Velocity",
@@ -396,24 +447,45 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             description="The velocity of the animal by ViRMEN iteration.",
             unit="m/s",
             conversion=0.01,
-            **timing_kwargs,
+            timestamps=spatial_series,
         )
+
+        behavior.add(velocity_ts)
+
+        non_zero_view_angle_velocity = any(x != 0 for x in velocity_data[:, 2])
+        if not non_zero_view_angle_velocity:
+            return
+
+        if "ViewAngle" not in behavior.data_interfaces:
+            behavior.add(CompassDirection(name="ViewAngle"))
+
+        view_angle_obj = behavior.data_interfaces["ViewAngle"]
+        # vel(:, 3)      = -rad2deg(vel(:, 3));
+        view_angle_data_velocity = [-math.degrees(angle) for angle in velocity_data[:, 2]]
 
         view_angle_obj.create_spatial_series(
             name="VelocityViewAngle",
-            data=H5DataIO(view_angle_velocity_data, compression="gzip"),
-            description="The velocity view angle of the animal by ViRMEN iteration.",
-            reference_frame=reference_frame,
-            **timing_kwargs,
+            data=H5DataIO(view_angle_data_velocity, compression="gzip"),
+            description="The velocity view angle of the animal by ViRMEN iteration in the unit of degrees.",
+            reference_frame=spatial_series.reference_frame,
+            unit="degrees",
+            timestamps=spatial_series,
         )
 
+    def add_sensor_dots(self, nwbfile: NWBFile):
+
+        session = self._mat_dict["session"]
         sensor_dots = session["sensordots"]
+
+        behavior = get_module(nwbfile, "behavior")
+        spatial_series = behavior["Position"]["SpatialSeries"]
+
         sensor_dots_ts = TimeSeries(
             name="SensorDots",
             data=H5DataIO(sensor_dots, compression="gzip"),
             description="The sensordots by ViRMEN iteration.",
             unit="a.u.",
-            **timing_kwargs,
+            timestamps=spatial_series,
         )
 
         velocity_gain = session["velocityGain"]
@@ -422,13 +494,10 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             data=H5DataIO(velocity_gain, compression="gzip"),
             description="The velocity gain by ViRMEN iteration.",
             unit="a.u.",
-            **timing_kwargs,
+            timestamps=spatial_series,
+
         )
 
-        behavior = get_module(nwbfile, "behavior", "contains processed behavioral data")
-        behavior.add(position_obj)
-        behavior.add(view_angle_obj)
-        behavior.add(velocity_ts)
         behavior.add(sensor_dots_ts)
         behavior.add(velocity_gain_ts)
 
@@ -436,6 +505,9 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         self.add_lab_meta_data(nwbfile=nwbfile)
         self.add_trials(nwbfile=nwbfile)
         self.add_position(nwbfile=nwbfile)
+        self.add_view_angle(nwbfile=nwbfile)
+        self.add_velocity(nwbfile=nwbfile)
+        self.add_sensor_dots(nwbfile=nwbfile)
         self.add_events(nwbfile=nwbfile)
 
         return nwbfile
