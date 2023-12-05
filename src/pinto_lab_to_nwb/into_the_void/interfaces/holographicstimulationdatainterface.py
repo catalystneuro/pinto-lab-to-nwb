@@ -49,26 +49,6 @@ def get_absolute_frame_times_from_xml(xml_root):
 class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
     """Data interface for adding the holographic stimulation to the NWB file."""
 
-    def get_metadata_schema(self) -> dict:
-        metadata_schema = super().get_metadata_schema()
-        metadata_schema["required"] = ["Ophys"]
-        metadata_schema["properties"]["Ophys"] = get_base_schema()
-        metadata_schema["properties"]["Ophys"]["properties"] = dict(
-            Device=dict(type="array", minItems=1, items=get_schema_from_hdmf_class(Device)),
-        )
-        metadata_schema["properties"]["Ophys"]["properties"].update(
-            ImageSegmentation=get_schema_from_hdmf_class(ImageSegmentation),
-            ImagingPlane=get_schema_from_hdmf_class(ImagingPlane),
-            OptogeneticStimulusSite=get_schema_from_hdmf_class(OptogeneticStimulusSite),
-        )
-        metadata_schema["properties"]["Ophys"]["required"] = ["Device", "ImageSegmentation"]
-
-        # Temporary fixes until centralized definition of metadata schemas
-        metadata_schema["properties"]["Ophys"]["properties"]["ImagingPlane"].update(type="array")
-        metadata_schema["properties"]["Ophys"]["properties"]["OptogeneticStimulusSite"].update(type="array")
-
-        return metadata_schema
-
     def __init__(
         self,
         folder_path: FolderPathType,
@@ -201,6 +181,34 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
     def set_aligned_timestamps(self, aligned_timestamps: np.ndarray):
         self._times = aligned_timestamps
 
+    def get_metadata_schema(self) -> dict:
+        metadata_schema = super().get_metadata_schema()
+        metadata_schema["required"] = ["Ophys"]
+        metadata_schema["properties"]["Ophys"] = get_base_schema()
+        metadata_schema["properties"]["Ophys"]["properties"] = dict(
+            Device=dict(type="array", minItems=1, items=get_schema_from_hdmf_class(Device)),
+        )
+        metadata_schema["properties"]["Ophys"]["properties"].update(
+            ImageSegmentation=get_schema_from_hdmf_class(ImageSegmentation),
+            ImagingPlane=get_schema_from_hdmf_class(ImagingPlane),
+            OptogeneticStimulusSite=get_schema_from_hdmf_class(OptogeneticStimulusSite),
+            OptogeneticDevice=dict(
+                type="object",
+                required=["SpatialLightModulator", "LightSource"],
+                properties=dict(
+                    SpatialLightModulator=get_schema_from_hdmf_class(SpatialLightModulator),
+                    LightSource=get_schema_from_hdmf_class(LightSource),
+                ),
+            ),
+        )
+        metadata_schema["properties"]["Ophys"]["required"] = ["Device", "ImageSegmentation"]
+
+        # Temporary fixes until centralized definition of metadata schemas
+        metadata_schema["properties"]["Ophys"]["properties"]["ImagingPlane"].update(type="array")
+        metadata_schema["properties"]["Ophys"]["properties"]["OptogeneticStimulusSite"].update(type="array")
+
+        return metadata_schema
+
     def get_metadata(self) -> dict:
         metadata = get_default_ophys_metadata()
         device_name = "device"  # ndx-holographic-stimulation requires a device named "device"
@@ -247,7 +255,8 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         imaging_plane_name = "ImagingPlane" + plane_suffix
 
         add_imaging_plane(nwbfile=nwbfile, metadata=metadata_copy, imaging_plane_name=imaging_plane_name)
-        device_name = metadata_copy["Ophys"]["Device"][0]["name"]
+
+        device_name = "device"
         device = nwbfile.devices[device_name]
 
         # Add stimulus pattern to NWBFile
@@ -275,35 +284,27 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         nwbfile.add_ogen_site(stim_site)
 
         # Add SLM device to NWBFile
-        spatial_light_modulator_name = "spatial_light_modulator"
+        spatial_light_modulator_metadata = metadata_copy["Ophys"]["OptogeneticDevice"]["SpatialLightModulator"]
+        spatial_light_modulator_name = spatial_light_modulator_metadata["name"]
         if spatial_light_modulator_name in nwbfile.devices:
             raise ValueError(
                 f"'{spatial_light_modulator_name}' already added to the NWBFile."
             )
-        spatial_light_modulator_metadata = next(
-            slm_metadata
-            for slm_metadata in metadata["Ophys"]["Device"]
-            if slm_metadata["name"] == spatial_light_modulator_name
-        )
         spatial_light_modulator = SpatialLightModulator(**spatial_light_modulator_metadata)
         nwbfile.add_device(spatial_light_modulator)
 
         # Add light source device to NWBFile
-        light_source_name = "light_source"
+        light_source_metadata = metadata_copy["Ophys"]["OptogeneticDevice"]["LightSource"]
+        light_source_name = light_source_metadata["name"]
         if light_source_name in nwbfile.devices:
             raise ValueError(
                 f"'{light_source_name}' already added to the NWBFile."
             )
-        light_source_metadata = next(
-            device_metadata
-            for device_metadata in metadata["Ophys"]["Device"]
-            if device_metadata["name"] == light_source_name
-        )
         light_source = LightSource(**light_source_metadata)
         nwbfile.add_device(light_source)
 
         # Add plane segmentation to NWBFile
-        add_image_segmentation(nwbfile=nwbfile, metadata=metadata_copy)
+        add_image_segmentation(nwbfile=nwbfile, metadata=metadata)
 
         ophys = get_module(nwbfile, "ophys")
 
