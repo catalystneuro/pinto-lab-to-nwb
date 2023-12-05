@@ -3,7 +3,7 @@ Ophys:
     SpatialLightModulator:
       name: spatial_light_modulator
       description: |
-        NeuraLight 3D SLM Module for Photoactivation Pathway, multi-region, holographic stimulation 
+        NeuraLight 3D SLM Module for Photoactivation Pathway, multi-region, holographic stimulation
         and activation module using 512 x 512 spatial light modulator with Overdrive technology.
       manufacturer: NeuraLight
     LightSource:

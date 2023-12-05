@@ -287,9 +287,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         spatial_light_modulator_metadata = metadata_copy["Ophys"]["OptogeneticDevice"]["SpatialLightModulator"]
         spatial_light_modulator_name = spatial_light_modulator_metadata["name"]
         if spatial_light_modulator_name in nwbfile.devices:
-            raise ValueError(
-                f"'{spatial_light_modulator_name}' already added to the NWBFile."
-            )
+            raise ValueError(f"'{spatial_light_modulator_name}' already added to the NWBFile.")
         spatial_light_modulator = SpatialLightModulator(**spatial_light_modulator_metadata)
         nwbfile.add_device(spatial_light_modulator)
 
@@ -297,9 +295,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         light_source_metadata = metadata_copy["Ophys"]["OptogeneticDevice"]["LightSource"]
         light_source_name = light_source_metadata["name"]
         if light_source_name in nwbfile.devices:
-            raise ValueError(
-                f"'{light_source_name}' already added to the NWBFile."
-            )
+            raise ValueError(f"'{light_source_name}' already added to the NWBFile.")
         light_source = LightSource(**light_source_metadata)
         nwbfile.add_device(light_source)
 
