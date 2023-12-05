@@ -1,0 +1,23 @@
+Ophys:
+  Device:
+    - name: spatial_light_modulator
+      description: |
+        NeuraLight 3D SLM Module for Photoactivation Pathway, multi-region, holographic stimulation 
+        and activation module using 512 x 512 spatial light modulator with Overdrive technology.
+      manufacturer: NeuraLight
+    - name: light_source
+      description: |
+        The Coherent Monaco laser used for holographic stimulation with 251 fs pulse width and 2 MHz pulse rate.
+      stimulation_wavelenght: 1035 # nm
+      power: 700 # the peak power of stimulation in Watts
+      filter: short pass 1040 nm filter
+      intensity: 0.005 # the intensity of excitation Watts
+      # exposure_time: # the exposure time of the sample in seconds
+      pulse_rate: 2 # the pulse rate of the laser is MHz
+  OptogeneticStimulusSite:
+    - name: site
+      description: |
+        The targeted location of the holographic stimulation.
+      excitation_lambda: 1050 # nm
+      effector: ChRmine # the peak power of stimulation in Watts
+      # location: # the targeted brain area

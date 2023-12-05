@@ -11,6 +11,7 @@ from neuroconv.tools.roiextractors.roiextractors import get_default_ophys_metada
 from neuroconv.utils import FolderPathType, dict_deep_update, get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile
 from pynwb.device import Device
+from pynwb.ogen import OptogeneticStimulusSite
 from pynwb.ophys import PlaneSegmentation, ImageSegmentation, ImagingPlane
 from roiextractors.extractors.tiffimagingextractors.brukertiffimagingextractor import (
     _parse_xml,
@@ -58,11 +59,13 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         metadata_schema["properties"]["Ophys"]["properties"].update(
             ImageSegmentation=get_schema_from_hdmf_class(ImageSegmentation),
             ImagingPlane=get_schema_from_hdmf_class(ImagingPlane),
+            OptogeneticStimulusSite=get_schema_from_hdmf_class(OptogeneticStimulusSite),
         )
         metadata_schema["properties"]["Ophys"]["required"] = ["Device", "ImageSegmentation"]
 
         # Temporary fixes until centralized definition of metadata schemas
         metadata_schema["properties"]["Ophys"]["properties"]["ImagingPlane"].update(type="array")
+        metadata_schema["properties"]["Ophys"]["properties"]["OptogeneticStimulusSite"].update(type="array")
 
         return metadata_schema
 
@@ -221,6 +224,14 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         )
         metadata["Ophys"].update(dict(ImageSegmentation=default_image_segmentation))
 
+        # add default optogenetic stimulus site metadata
+        default_site_metadata = dict(
+            name="site",
+            description="The targeted location of the holographic stimulation.",
+            device=device_name,
+        )
+        metadata["Ophys"].update(dict(OptogeneticStimulusSite=[default_site_metadata]))
+
         return metadata
 
     def add_to_nwbfile(
@@ -236,17 +247,15 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         imaging_plane_name = "ImagingPlane" + plane_suffix
 
         add_imaging_plane(nwbfile=nwbfile, metadata=metadata_copy, imaging_plane_name=imaging_plane_name)
-        device_name = "device"
+        device_name = metadata_copy["Ophys"]["Device"][0]["name"]
         device = nwbfile.devices[device_name]
 
-        average_power = np.mean([int(markpoint["UncagingLaserPower"]) for markpoint in self.sequence_mark_points_list])
-
+        # Add stimulus pattern to NWBFile
         num_revolutions = int(self.sequence_mark_points_list[0]["SpiralRevolutions"])
         inter_stimulus_interval = int(self.sequence_mark_points_list[0]["InterPointDelay"]) / 1000
         spiral_params = self.sequence_mark_points_list[0]["points"][0]
         diameter = float(spiral_params["SpiralWidth"])
         height = float(spiral_params["SpiralHeight"])
-
         spiral_scanning = SpiralScanning(
             name="stimulus_pattern",
             diameter=diameter,
@@ -259,36 +268,41 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         )
         nwbfile.add_lab_meta_data(spiral_scanning)
 
-        stim_site = PatternedOptogeneticStimulusSite(
-            name="site",
-            device=device,
-            description="todo",
-            excitation_lambda=700.0,  # todo # nm
-            effector="todo",
-            location="todo",
-        )
+        # Add optogenetic stimulus site to NWBFile
+        stimulus_site_metadata = metadata_copy["Ophys"]["OptogeneticStimulusSite"][0]
+        stimulus_site_metadata.update(device=device)
+        stim_site = PatternedOptogeneticStimulusSite(**stimulus_site_metadata)
         nwbfile.add_ogen_site(stim_site)
 
-        spatial_light_modulator = SpatialLightModulator(
-            name="spatial_light_modulator",
-            description="todo",
-            model="todo",
-            resolution=0.01,  # todo
+        # Add SLM device to NWBFile
+        spatial_light_modulator_name = "spatial_light_modulator"
+        if spatial_light_modulator_name in nwbfile.devices:
+            raise ValueError(
+                f"'{spatial_light_modulator_name}' already added to the NWBFile."
+            )
+        spatial_light_modulator_metadata = next(
+            slm_metadata
+            for slm_metadata in metadata["Ophys"]["Device"]
+            if slm_metadata["name"] == spatial_light_modulator_name
         )
+        spatial_light_modulator = SpatialLightModulator(**spatial_light_modulator_metadata)
         nwbfile.add_device(spatial_light_modulator)
-        laser_name = self.sequence_mark_points_list[0]["UncagingLaser"]
-        light_source = LightSource(
-            name="light_source",
-            stimulation_wavelenght=700.0,  # nm
-            description=f"The {laser_name} laser used for holographic stimulation.",
-            filter="todo",
-            power=average_power,  # can be average or peak stimulation power
-            intensity=400.0,
-            exposure_time=400.0,
-            pulse_rate=400.0,
+
+        # Add light source device to NWBFile
+        light_source_name = "light_source"
+        if light_source_name in nwbfile.devices:
+            raise ValueError(
+                f"'{light_source_name}' already added to the NWBFile."
+            )
+        light_source_metadata = next(
+            device_metadata
+            for device_metadata in metadata["Ophys"]["Device"]
+            if device_metadata["name"] == light_source_name
         )
+        light_source = LightSource(**light_source_metadata)
         nwbfile.add_device(light_source)
 
+        # Add plane segmentation to NWBFile
         add_image_segmentation(nwbfile=nwbfile, metadata=metadata_copy)
 
         ophys = get_module(nwbfile, "ophys")
