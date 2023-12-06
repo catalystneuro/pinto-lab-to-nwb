@@ -39,7 +39,7 @@ class WidefieldProcessedImagingExtractor(ImagingExtractor):
         import h5py
 
         super().__init__(file_path=file_path)
-        self.convert_video_dtype_to = convert_video_dtype_to or np.uint16
+        self.convert_video_dtype_to = convert_video_dtype_to or np.uint64
 
         file = h5py.File(file_path, "r")
         expected_struct_name = "rawf"
