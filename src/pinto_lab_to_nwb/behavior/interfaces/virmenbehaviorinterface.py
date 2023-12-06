@@ -121,7 +121,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
                 else:
                     maze_kwargs.update(
                         data=mazes_criteria_df[maze_column].values.tolist(),
-                )
+                    )
                 maze_extension.add_column(**maze_kwargs)
 
         global_settings = session["protocol"].pop("globalSettings")
@@ -381,12 +381,14 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         # pos = full(behavdata.session.position(:, [1 2 4]));
         # pos(:, 3) = -rad2deg(pos(:, 3));
         if position.shape[1] != 4:
-            raise ValueError(f"Position array is expected to have 4 (x, y, theta, z) dimensions, but has {position.shape[1]} dimensions.")
+            raise ValueError(
+                f"Position array is expected to have 4 (x, y, theta, z) dimensions, but has {position.shape[1]} dimensions."
+            )
         position_data = position[:, [0, 1, 3]]
 
         timestamps = self.get_timestamps()
         assert (
-                len(timestamps) == position.shape[0]
+            len(timestamps) == position.shape[0]
         ), f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
 
         # For the position, our convention across tasks and mazes is that position (0,0) is the start of the "sample"
@@ -400,14 +402,13 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             description="The x, y, z position of the animal by ViRMEN iteration.",
             reference_frame=reference_frame,
             conversion=0.01,
-            timestamps=H5DataIO(timestamps, compression="gzip")
+            timestamps=H5DataIO(timestamps, compression="gzip"),
         )
 
         behavior = get_module(nwbfile, "behavior", "contains processed behavioral data")
         behavior.add(position_obj)
 
     def add_view_angle(self, nwbfile: NWBFile):
-
         session = self._mat_dict["session"]
         position = session["position"]
         # convert radians to degrees
@@ -433,7 +434,6 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         behavior.add(view_angle_obj)
 
     def add_velocity(self, nwbfile: NWBFile):
-
         session = self._mat_dict["session"]
         velocity = session["velocity"]
         # reference "BehavSync2P.m" script where the velocity is accessed as:
@@ -476,7 +476,6 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         )
 
     def add_sensor_dots(self, nwbfile: NWBFile):
-
         session = self._mat_dict["session"]
         sensor_dots = session["sensordots"]
 
@@ -498,7 +497,6 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             description="The velocity gain by ViRMEN iteration.",
             unit="a.u.",
             timestamps=spatial_series,
-
         )
 
         behavior.add(sensor_dots_ts)
