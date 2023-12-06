@@ -249,11 +249,8 @@ if __name__ == "__main__":
     # The file path to that points to the .mat file containing the timestamps for the behavior data.
     behavior_timestamps_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230801/sync_data.csv"
 
-    widefield_time_sync_file_path = imaging_folder_path / "wf_behav_sync.mat"
-
     # Parameters for the Widefield time alignment
-    # Path to the aligned timestamps for the eye tracking data.
-    sync_data_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/sync_data.csv"
+    widefield_time_sync_file_path = imaging_folder_path / "wf_behav_sync.mat"
     # The name of the struct in the .mat file that contains the timestamps for the imaging data.
     widefield_time_sync_struct_name = "wf_behav_sync_data"
     # The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.

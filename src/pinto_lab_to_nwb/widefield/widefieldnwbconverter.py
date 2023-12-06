@@ -86,10 +86,14 @@ class WideFieldNWBConverter(NWBConverter):
             )
 
     def temporally_align_data_interfaces(self):
+        if "BehaviorViRMENWidefieldTimeAligned" not in self.data_interface_objects:
+            return
+
         frame_time_aligned_behavior_interface = self.data_interface_objects["BehaviorViRMENWidefieldTimeAligned"]
         blue_frames_timestamps = frame_time_aligned_behavior_interface.get_timestamps()
-        imaging_interface = self.data_interface_objects["ImagingBlue"]
 
+        # Set aligned timestamps for imaging interfaces
+        imaging_interface = self.data_interface_objects["ImagingBlue"]
         imaging_interface.set_aligned_timestamps(aligned_timestamps=blue_frames_timestamps)
 
         downsampled_imaging_interface = self.data_interface_objects["ProcessedImagingBlue"]
