@@ -9,9 +9,8 @@ from neuroconv import NWBConverter
 from neuroconv.utils import DeepDict
 from pynwb import NWBFile
 
-from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENWidefieldTimeAlignedBehaviorInterface
-from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
-from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
+from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENTemporalAlignmentBehaviorInterface
+from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data, add_motion_correction
 from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldImagingInterface,
     WidefieldProcessedImagingInterface,
@@ -33,7 +32,7 @@ class WideFieldNWBConverter(NWBConverter):
         SummaryImagesBlue=WidefieldSegmentationImagesBlueInterface,
         SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
         BehaviorViRMEN=ViRMENBehaviorInterface,
-        BehaviorViRMENWidefieldTimeAligned=ViRMENWidefieldTimeAlignedBehaviorInterface,
+        BehaviorViRMENWidefieldTimeAligned=ViRMENTemporalAlignmentBehaviorInterface,
     )
 
     def __init__(self, source_data: Dict[str, dict], verbose: bool = True):
@@ -96,8 +95,11 @@ class WideFieldNWBConverter(NWBConverter):
         downsampled_imaging_interface = self.data_interface_objects["ProcessedImagingBlue"]
         downsampled_imaging_interface.set_aligned_timestamps(aligned_timestamps=blue_frames_timestamps)
 
-        # For violet the interpolation doesn't work yet, the first 8 values are 0.0 after interpolation
         violet_interface = self.data_interface_objects["ImagingViolet"]
         violet_interface.align_by_interpolation(
             aligned_timestamps=blue_frames_timestamps, unaligned_timestamps=violet_interface.imaging_extractor._times
+        )
+        downsampled_violet_interface = self.data_interface_objects["ProcessedImagingViolet"]
+        downsampled_violet_interface.align_by_interpolation(
+            aligned_timestamps=blue_frames_timestamps, unaligned_timestamps=downsampled_violet_interface.imaging_extractor._times
         )

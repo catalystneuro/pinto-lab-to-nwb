@@ -31,6 +31,8 @@ def session_to_nwb(
     subject_metadata_file_path: Optional[FilePathType] = None,
     virmen_file_path: Optional[FilePathType] = None,
     widefield_time_sync_file_path: Optional[FilePathType] = None,
+    widefield_time_sync_struct_name: Optional[str] = None,
+    im_frame_timestamps_name: Optional[str] = None,
     stub_test: bool = False,
 ):
     """
@@ -67,6 +69,10 @@ def session_to_nwb(
     widefield_time_sync_file_path: FilePathType, optional
         The file path to that points to the .mat file containing the timestamps for the imaging data.
         These timestamps are used to set the times of the widefield imaging data in the NWB file.
+    widefield_time_sync_struct_name: str, optional
+        The name of the sync data struct in the .mat file. (e.g. "wf_behav_sync_data")
+    im_frame_timestamps_name: str, optional
+        The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -155,7 +161,12 @@ def session_to_nwb(
         source_data.update(BehaviorViRMEN=dict(file_path=str(virmen_file_path)))
 
     if widefield_time_sync_file_path:
-        source_data.update(BehaviorViRMENWidefieldTimeAligned=dict(file_path=str(widefield_time_sync_file_path)))
+        time_alignment_behavior_source_data = dict(
+            file_path=str(widefield_time_sync_file_path),
+            sync_data_struct_name=widefield_time_sync_struct_name,
+            im_frame_timestamps_name=im_frame_timestamps_name,
+        )
+        source_data.update(BehaviorViRMENWidefieldTimeAligned=time_alignment_behavior_source_data)
 
     converter = WideFieldNWBConverter(source_data=source_data)
 
@@ -198,8 +209,8 @@ if __name__ == "__main__":
     # Parameters for conversion
 
     # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
-    # imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
-    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
+    imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
+    # imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
     # The file path to the strobe sequence file.
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
     # The file path to the downsampled imaging data in Matlab format (.mat file).
@@ -212,15 +223,15 @@ if __name__ == "__main__":
     vasculature_mask_file_path = imaging_folder_path / "vasculature_mask_2.mat"
 
     # The file path that contains the manual mask on the full size session image (blue channel).
-    # manual_mask_file_path = imaging_folder_path / "reg_manual_mask_jlt6316_Cherry_20230802_1_1_1.mat"
-    manual_mask_file_path = imaging_folder_path / "regManualMask.mat"
+    manual_mask_file_path = imaging_folder_path / "reg_manual_mask_jlt6316_Cherry_20230802_1_1_1.mat"
+    # manual_mask_file_path = imaging_folder_path / "regManualMask.mat"
     # The name of the struct in the manual mask file that contains the manual mask (e.g. "regMask" or "reg_manual_mask").
-    # manual_mask_struct_name = "reg_manual_mask"
-    manual_mask_struct_name = "regMask"
+    manual_mask_struct_name = "reg_manual_mask"
+    # manual_mask_struct_name = "regMask"
 
     # The file path that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
-    # roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef_1.mat"
-    roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef.mat"
+    roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef_1.mat"
+    # roi_from_ref_mat_file_path = imaging_folder_path / "ROIfromRef.mat"
 
     # The file path that contains the contrast based vasculature mask on the downsampled (binned) session image (blue channel).
     binned_vasculature_mask_file_path = imaging_folder_path / "vasculature_mask_2.mat"
@@ -240,8 +251,16 @@ if __name__ == "__main__":
 
     widefield_time_sync_file_path = imaging_folder_path / "wf_behav_sync.mat"
 
+    # Parameters for the Widefield time alignment
+    # Path to the aligned timestamps for the eye tracking data.
+    sync_data_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/sync_data.csv"
+    # The name of the struct in the .mat file that contains the timestamps for the imaging data.
+    widefield_time_sync_struct_name = "wf_behav_sync_data"
+    # The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
+    im_frame_timestamps_name = "im_frame_timestamps"
+
     # The file path to the NWB file that will be created.
-    nwbfile_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles/widefield/DrChicken_20230419_20hz.nwb")
+    nwbfile_path = Path("/Users/weian/data/full_Cherry_20230802.nwb")
 
     stub_test = False
 
@@ -261,5 +280,7 @@ if __name__ == "__main__":
         subject_metadata_file_path=subject_metadata_file_path,
         virmen_file_path=virmen_file_path,
         widefield_time_sync_file_path=widefield_time_sync_file_path,
+        widefield_time_sync_struct_name=widefield_time_sync_struct_name,
+        im_frame_timestamps_name=im_frame_timestamps_name,
         stub_test=stub_test,
     )

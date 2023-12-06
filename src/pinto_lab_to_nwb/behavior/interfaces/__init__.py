@@ -1,2 +1,2 @@
 from .virmenbehaviorinterface import ViRMENBehaviorInterface
-from .virmenwidefieldtimealignedbehaviorinterface import ViRMENWidefieldTimeAlignedBehaviorInterface
+from .virmentemporalalignmentbehaviorinterface import ViRMENTemporalAlignmentBehaviorInterface
