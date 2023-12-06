@@ -12,7 +12,7 @@ from pynwb import TimeSeries
 from pynwb.behavior import Position, CompassDirection
 from pynwb.file import NWBFile
 
-from neuroconv.utils import FilePathType, dict_deep_update, calculate_regular_series_rate
+from neuroconv.utils import FilePathType, dict_deep_update
 from neuroconv.basetemporalalignmentinterface import BaseTemporalAlignmentInterface
 from neuroconv.tools.nwb_helpers import get_module
 from neuroconv.tools.signal_processing import get_rising_frames_from_ttl
@@ -71,7 +71,8 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         experiment_code = session["experimentcode"]["function_handle"]["function"]
 
         mazes = session["protocol"].pop("mazes")
-        if isinstance(mazes, dict):
+        num_mazes = session["protocol"]["numMazesInProtocol"]
+        if num_mazes == 1:
             maze_extension = MazeExtension(
                 name="mazes",
                 description=f"The parameters for the maze in {experiment_name}.",
@@ -97,7 +98,7 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
                 )
 
         criteria = session["protocol"].pop("criteria")
-        if isinstance(criteria, dict):
+        if num_mazes == 1:
             for column_name, column_value in criteria.items():
                 maze_extension.add_column(
                     name=column_name,
@@ -133,7 +134,9 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             stimulus_code_str = stimulus_code["function_handle"]["function"]
             session_protocol.update(stimulus_code=stimulus_code_str)
 
+        # stimulusParameters is a list of column names which are already added to stimulus_protocol
         session_protocol.pop("stimulusParameters")
+
         # Create stimulus protocol with global settings
         stimulus_protocol = DynamicTable(
             name="stimulus_protocol",

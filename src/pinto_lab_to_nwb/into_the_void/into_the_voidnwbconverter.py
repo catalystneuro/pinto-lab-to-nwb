@@ -6,12 +6,7 @@ from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
 from neuroconv.tools.signal_processing import get_rising_frames_from_ttl
-from neuroconv.utils import FolderPathType, DeepDict, FilePathType
-from neuroconv.utils import FilePathType
-
-from pinto_lab_to_nwb.into_the_void.interfaces import HolographicStimulationInterface
-from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
-from neuroconv.utils import FolderPathType, DeepDict
+from neuroconv.utils import FilePathType, FolderPathType, DeepDict
 from pynwb import NWBFile
 
 from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
@@ -70,7 +65,6 @@ class IntoTheVoidNWBConverter(NWBConverter):
         segmentation_folder_path: Optional[FolderPathType] = None,
         segmentation_to_imaging_map: dict = None,
         virmen_file_path: Optional[FilePathType] = None,
-        behavior_timestamps_file_path: Optional[FilePathType] = None,
     ):
         self.verbose = verbose
         self.data_interface_objects = dict()

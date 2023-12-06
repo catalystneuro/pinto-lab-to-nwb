@@ -42,9 +42,6 @@ def session_to_nwb(
         The file path to the .mat file containing the subject metadata.
     virmen_file_path: FilePathType, optional
         The file path to the ViRMEN .mat file.
-    behavior_timestamps_file_path: FilePathType, optional
-        The file path to that points to the .mat file containing the timestamps for the behavior data.
-        These timestamps are used to set the times of the behavior data in the NWB file.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -54,6 +51,7 @@ def session_to_nwb(
         imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
+        virmen_file_path=virmen_file_path,
         verbose=True,
     )
 
@@ -112,8 +110,7 @@ if __name__ == "__main__":
 
     # The file path to the ViRMEN .mat file.
     virmen_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/NCCR51_TowersTaskSwitchEasy_Session_20230407_143948.mat")
-    # The file path to that points to the .mat file containing the timestamps for the behavior data.
-    timestamps_file_path = Path("/Volumes/t7-ssd/Pinto/eyetracking/sync_data.csv")
+
     # The folder path that will contain the NWB files.
     nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
     # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
@@ -134,6 +131,5 @@ if __name__ == "__main__":
         segmentation_to_imaging_plane_map=plane_map,
         subject_metadata_file_path=subject_metadata_file_path,
         virmen_file_path=virmen_file_path,
-        behavior_timestamps_file_path=timestamps_file_path,
         stub_test=stub_test,
     )
