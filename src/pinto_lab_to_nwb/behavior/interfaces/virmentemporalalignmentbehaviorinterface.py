@@ -16,11 +16,11 @@ class ViRMENTemporalAlignmentBehaviorInterface(BaseTemporalAlignmentInterface):
     """
 
     def __init__(
-            self,
-            file_path: FilePathType,
-            sync_data_struct_name: str,
-            im_frame_timestamps_name: Optional[str] = None,
-            verbose: bool = True,
+        self,
+        file_path: FilePathType,
+        sync_data_struct_name: str,
+        im_frame_timestamps_name: Optional[str] = None,
+        verbose: bool = True,
     ):
         """
         Parameters
@@ -44,9 +44,9 @@ class ViRMENTemporalAlignmentBehaviorInterface(BaseTemporalAlignmentInterface):
 
     def get_original_timestamps(self) -> np.ndarray:
         mat_dict = read_mat(filename=self.source_data["file_path"])[self.sync_data_struct_name]
-        assert self.im_frame_timestamps_name in mat_dict, (
-            f"'{self.im_frame_timestamps_name}' not in in file '{self.source_data['file_path']}'."
-        )
+        assert (
+            self.im_frame_timestamps_name in mat_dict
+        ), f"'{self.im_frame_timestamps_name}' not in in file '{self.source_data['file_path']}'."
         return mat_dict[self.im_frame_timestamps_name]
 
     def get_timestamps(self) -> np.ndarray:
@@ -74,7 +74,7 @@ class ViRMENTemporalAlignmentBehaviorInterface(BaseTemporalAlignmentInterface):
 
         timestamps = self.get_timestamps()
         assert (
-                len(timestamps) == position.shape[0]
+            len(timestamps) == position.shape[0]
         ), f"The length of timestamps ({len(timestamps)}) must match the length of position ({position.shape[0]})."
 
         reference_frame = "unknown"

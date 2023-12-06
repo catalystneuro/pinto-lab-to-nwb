@@ -101,5 +101,6 @@ class WideFieldNWBConverter(NWBConverter):
         )
         downsampled_violet_interface = self.data_interface_objects["ProcessedImagingViolet"]
         downsampled_violet_interface.align_by_interpolation(
-            aligned_timestamps=blue_frames_timestamps, unaligned_timestamps=downsampled_violet_interface.imaging_extractor._times
+            aligned_timestamps=blue_frames_timestamps,
+            unaligned_timestamps=downsampled_violet_interface.imaging_extractor._times,
         )
