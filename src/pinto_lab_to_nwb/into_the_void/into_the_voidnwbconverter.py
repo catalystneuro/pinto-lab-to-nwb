@@ -48,7 +48,7 @@ def get_default_segmentation_to_imaging_name_mapping(
     if num_channels == 1 and num_planes == 1:
         imaging_channel_plane_names = [None]
     else:
-        imaging_channel_plane_names = plane_streams if num_planes == 1 else streams["channel_streams"]
+        imaging_channel_plane_names = plane_streams if num_planes != 1 else streams["channel_streams"]
 
     segmentation_to_imaging_name_mapping = dict(zip(segmentation_channel_plane_names, imaging_channel_plane_names))
 
