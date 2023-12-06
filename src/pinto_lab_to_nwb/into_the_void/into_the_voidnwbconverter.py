@@ -5,11 +5,10 @@ from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
-from neuroconv.tools.signal_processing import get_rising_frames_from_ttl
 from neuroconv.utils import FilePathType, FolderPathType, DeepDict
 from pynwb import NWBFile
 
-from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface
+from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENTemporalAlignmentBehaviorInterface
 
 
 def get_default_segmentation_to_imaging_name_mapping(
@@ -65,6 +64,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
         segmentation_folder_path: Optional[FolderPathType] = None,
         segmentation_to_imaging_map: dict = None,
         virmen_file_path: Optional[FilePathType] = None,
+        two_photon_time_sync_file_path: Optional[FilePathType] = None,
+        two_photon_time_sync_struct_name: Optional[str] = None,
+        im_frame_timestamps_name: Optional[str] = None,
     ):
         self.verbose = verbose
         self.data_interface_objects = dict()
@@ -137,8 +139,15 @@ class IntoTheVoidNWBConverter(NWBConverter):
 
         if virmen_file_path:
             behavior_interface = ViRMENBehaviorInterface(file_path=virmen_file_path, verbose=verbose)
-
             self.data_interface_objects.update(BehaviorViRMEN=behavior_interface)
+
+        if two_photon_time_sync_file_path:
+            time_alignment_behavior_interface = ViRMENTemporalAlignmentBehaviorInterface(
+                file_path=str(two_photon_time_sync_file_path),
+                sync_data_struct_name=two_photon_time_sync_struct_name,
+                im_frame_timestamps_name=im_frame_timestamps_name,
+            )
+            self.data_interface_objects.update(BehaviorViRMENTwoPhotonTimeAligned=time_alignment_behavior_interface)
 
     def get_metadata(self) -> DeepDict:
         imaging_metadata = self.data_interface_objects["Imaging"].get_metadata()
@@ -160,15 +169,23 @@ class IntoTheVoidNWBConverter(NWBConverter):
         return metadata
 
     def temporally_align_data_interfaces(self):
-        imaging_interface = self.data_interface_objects["Imaging"]
-        imaging_timestamps = imaging_interface.data_interface_objects["BrukerImaging"].get_timestamps()
+        if "BehaviorViRMENTwoPhotonTimeAligned" not in self.data_interface_objects:
+            return
 
-        behavior_interface = self.data_interface_objects["BehaviorViRMEN"]
-        behavior_timestamps = behavior_interface.get_timestamps()
+        frame_time_aligned_behavior_interface = self.data_interface_objects["BehaviorViRMENTwoPhotonTimeAligned"]
+        aligned_timestamps = frame_time_aligned_behavior_interface.get_timestamps()
+        aligned_starting_time = aligned_timestamps[0]
 
-        two_photon_ttl = behavior_interface._get_time_series("twop")
-        rising_frames = get_rising_frames_from_ttl(trace=two_photon_ttl)
-        # two_photon_times = timestamps[rising_frames]
+        # set aligned starting time for segmentation interfaces
+        for interface_name, interface in self.data_interface_objects.items():
+            if interface_name == "Imaging":
+                # set aligned starting time interfaces
+                imaging_converter = self.data_interface_objects["Imaging"]
+                for _, imaging_interface in imaging_converter.data_interface_objects.items():
+                    imaging_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
+            elif interface_name.startswith("Segmentation"):
+                segmentation_interface = self.data_interface_objects[interface_name]
+                segmentation_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)

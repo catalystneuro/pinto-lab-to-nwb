@@ -23,6 +23,9 @@ def session_to_nwb(
     segmentation_to_imaging_plane_map: dict = None,
     subject_metadata_file_path: Optional[FilePathType] = None,
     virmen_file_path: Optional[FilePathType] = None,
+    two_photon_time_sync_file_path: Optional[FilePathType] = None,
+    two_photon_time_sync_struct_name: Optional[str] = None,
+    im_frame_timestamps_name: Optional[str] = None,
     stub_test: bool = False,
 ):
     """
@@ -42,6 +45,13 @@ def session_to_nwb(
         The file path to the .mat file containing the subject metadata.
     virmen_file_path: FilePathType, optional
         The file path to the ViRMEN .mat file.
+    two_photon_time_sync_file_path: FilePathType, optional
+        The file path to that points to the .mat file containing the timestamps for the imaging data.
+        These timestamps are used to set the times of the widefield imaging data in the NWB file.
+    two_photon_time_sync_struct_name: str, optional
+        The name of the sync data struct in the .mat file. (e.g. "wf_behav_sync_data")
+    im_frame_timestamps_name: str, optional
+        The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -52,13 +62,16 @@ def session_to_nwb(
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
         virmen_file_path=virmen_file_path,
+        two_photon_time_sync_file_path=two_photon_time_sync_file_path,
+        two_photon_time_sync_struct_name=two_photon_time_sync_struct_name,
+        im_frame_timestamps_name=im_frame_timestamps_name,
         verbose=True,
     )
 
     conversion_options = {
         interface_name: dict(stub_test=stub_test)
         for interface_name in converter.data_interface_objects.keys()
-        if interface_name != "BehaviorViRMEN"
+        if interface_name not in ["BehaviorViRMEN", "BehaviorViRMENTwoPhotonTimeAligned"]
     }
 
     # Add datetime to conversion
@@ -111,6 +124,14 @@ if __name__ == "__main__":
     # The file path to the ViRMEN .mat file.
     virmen_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/NCCR51_TowersTaskSwitchEasy_Session_20230407_143948.mat")
 
+    # Parameters for the Bruker time alignment
+    # todo: replace this with real data once we received it
+    two_photon_time_sync_file_path = "/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1/wf_behav_sync.mat"
+    # The name of the struct in the .mat file that contains the timestamps for the imaging data.
+    two_photon_time_sync_struct_name = "wf_behav_sync_data"
+    # The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
+    im_frame_timestamps_name = "im_frame_timestamps"
+
     # The folder path that will contain the NWB files.
     nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
     # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
@@ -131,5 +152,8 @@ if __name__ == "__main__":
         segmentation_to_imaging_plane_map=plane_map,
         subject_metadata_file_path=subject_metadata_file_path,
         virmen_file_path=virmen_file_path,
+        two_photon_time_sync_file_path=two_photon_time_sync_file_path,
+        two_photon_time_sync_struct_name=two_photon_time_sync_struct_name,
+        im_frame_timestamps_name=im_frame_timestamps_name,
         stub_test=stub_test,
     )
