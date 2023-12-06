@@ -295,17 +295,6 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
         behavior = get_module(nwbfile, "behavior")
         timestamps = self.get_timestamps()
 
-        licks = self._get_time_series(series_name="licks")
-        if licks is not None:
-            licks_time_series = TimeSeries(
-                name="licks",
-                data=H5DataIO(licks, compression="gzip"),
-                timestamps=H5DataIO(timestamps, compression="gzip"),
-                description="The lick response measured over time.",
-                unit="a.u.",
-            )
-            behavior.add(licks_time_series)
-
         opto_voltage = self._get_time_series("optoVoltageOut")
         if opto_voltage is not None:
             opto_voltage_time_series = TimeSeries(
