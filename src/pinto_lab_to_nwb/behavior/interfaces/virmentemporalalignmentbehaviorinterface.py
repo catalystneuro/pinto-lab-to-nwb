@@ -86,6 +86,7 @@ class ViRMENTemporalAlignmentBehaviorInterface(BaseTemporalAlignmentInterface):
             data=H5DataIO(position[:, :-1], compression="gzip"),
             description="The average x, y position by imaging frame.",
             reference_frame=reference_frame,
+            conversion=0.01,
             timestamps=H5DataIO(timestamps, compression="gzip"),
         )
 
