@@ -478,18 +478,19 @@ class ViRMENBehaviorInterface(BaseTemporalAlignmentInterface):
             unit="a.u.",
             timestamps=spatial_series,
         )
+        behavior.add(sensor_dots_ts)
 
         velocity_gain = session["velocityGain"]
-        velocity_gain_ts = TimeSeries(
-            name="VelocityGain",
-            data=H5DataIO(velocity_gain, compression="gzip"),
-            description="The velocity gain by ViRMEN iteration.",
-            unit="a.u.",
-            timestamps=spatial_series,
-        )
-
-        behavior.add(sensor_dots_ts)
-        behavior.add(velocity_gain_ts)
+        non_zero_velocity_gain = any(x != 0 for x in velocity_gain)
+        if not non_zero_velocity_gain:
+            velocity_gain_ts = TimeSeries(
+                name="VelocityGain",
+                data=H5DataIO(velocity_gain, compression="gzip"),
+                description="The velocity gain by ViRMEN iteration.",
+                unit="a.u.",
+                timestamps=spatial_series,
+            )
+            behavior.add(velocity_gain_ts)
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
         self.add_lab_meta_data(nwbfile=nwbfile)

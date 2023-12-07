@@ -70,7 +70,7 @@ class ViRMENTemporalAlignmentBehaviorInterface(BaseTemporalAlignmentInterface):
         # reference "BehavSync2P.m" script where the position is accessed as:
         # 'position_by_im_frame' is the average [x y theta] position by imaging frame
         # 'velocity_by_im_frame' is the average [x y theta] velocity by imaging frame
-        position = self._mat_dict[position_by_im_frame_name]  # x,y,z
+        position = self._mat_dict[position_by_im_frame_name]  # [x y theta]
 
         timestamps = self.get_timestamps()
         assert (
