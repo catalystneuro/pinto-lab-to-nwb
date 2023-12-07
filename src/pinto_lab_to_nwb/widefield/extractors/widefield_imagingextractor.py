@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 from typing import List, Optional
 
@@ -6,22 +5,6 @@ import numpy as np
 from neuroconv.utils import FilePathType, FolderPathType
 from pymatreader import read_mat
 from roiextractors import MicroManagerTiffImagingExtractor
-
-# todo move filtering fix to roiextractors
-# Get the logger used by tifffile
-tifffile_logger = logging.getLogger("tifffile")
-
-
-# Define a custom filter class
-class CustomWarningFilter(logging.Filter):
-    def filter(self, record):
-        # Filter out warnings with the specific message
-        return "<tifffile.TiffTag 270 @42054>" not in record.getMessage()
-
-
-# Add the custom filter to the tifffile logger
-custom_filter = CustomWarningFilter()
-tifffile_logger.addFilter(custom_filter)
 
 
 class WidefieldImagingExtractor(MicroManagerTiffImagingExtractor):
