@@ -12,8 +12,24 @@ from neuroconv.utils import (
     FilePathType,
 )
 
+from ndx_pose import PoseEstimation
 from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
+
+import logging
+
+# Get the logger used by tifffile
+tifffile_logger = logging.getLogger("tifffile")
+
+# Define a custom filter class
+class CustomWarningFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out warnings with the specific message
+        return "tifffile" not in record.getMessage()
+
+# Add the custom filter to the tifffile logger
+custom_filter = CustomWarningFilter()
+tifffile_logger.addFilter(custom_filter)
 
 
 def session_to_nwb(
