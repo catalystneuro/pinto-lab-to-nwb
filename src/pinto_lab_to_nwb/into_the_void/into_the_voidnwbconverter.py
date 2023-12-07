@@ -201,7 +201,9 @@ class IntoTheVoidNWBConverter(NWBConverter):
 
         # set aligned starting time for segmentation interfaces
         segmentation_interface_names = [
-            interface_name for interface_name in self.data_interface_objects.keys() if interface_name.startswith("Segmentation")
+            interface_name
+            for interface_name in self.data_interface_objects.keys()
+            if interface_name.startswith("Segmentation")
         ]
         for interface_name in segmentation_interface_names:
             segmentation_interface = self.data_interface_objects[interface_name]
