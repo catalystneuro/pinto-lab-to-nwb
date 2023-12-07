@@ -194,16 +194,23 @@ class IntoTheVoidNWBConverter(NWBConverter):
         aligned_timestamps = frame_time_aligned_behavior_interface.get_timestamps()
         aligned_starting_time = aligned_timestamps[0]
 
+        # set aligned starting time for imaging interface
+        imaging_converter = self.data_interface_objects["Imaging"]
+        for _, imaging_interface in imaging_converter.data_interface_objects.items():
+            imaging_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
+
         # set aligned starting time for segmentation interfaces
-        for interface_name, interface in self.data_interface_objects.items():
-            if interface_name == "Imaging":
-                # set aligned starting time interfaces
-                imaging_converter = self.data_interface_objects["Imaging"]
-                for _, imaging_interface in imaging_converter.data_interface_objects.items():
-                    imaging_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
-            elif interface_name.startswith("Segmentation"):
-                segmentation_interface = self.data_interface_objects[interface_name]
-                segmentation_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
+        segmentation_interface_names = [
+            interface_name for interface_name in self.data_interface_objects.keys() if interface_name.startswith("Segmentation")
+        ]
+        for interface_name in segmentation_interface_names:
+            segmentation_interface = self.data_interface_objects[interface_name]
+            segmentation_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
+
+        # set aligned starting time for holographic stimulation interface
+        if "HolographicStimulation" in self.data_interface_objects:
+            holographic_stimulation_interface = self.data_interface_objects["HolographicStimulation"]
+            holographic_stimulation_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
