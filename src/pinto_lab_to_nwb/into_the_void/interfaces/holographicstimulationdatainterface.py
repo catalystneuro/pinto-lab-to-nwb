@@ -115,6 +115,11 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
                 points = galvo_point_element.findall("Point")
                 for point in points:
                     point_data = point.attrib
+                    # Add group info for each point
+                    point_data.update(group=galvo_data["Points"])
+
+                    # points are indexed starting at 1
+                    # the metadata for the points is repeated for each cycle, we can ignore duplicates
                     point_index = int(point_data["Index"]) - 1
                     if point_data in rois_dict[point_index]:
                         continue
@@ -327,9 +332,11 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         roi_ids = np.arange(0, self.num_rois)
         rois_dict = self.rois_dict
         centroids = []
+        stimulation_group_names = []
         for roi_id in roi_ids:
             roi_data = rois_dict[roi_id]
             centroids.append([float(roi_data[0]["X"]), float(roi_data[0]["Y"])])
+            stimulation_group_names.append(roi_data[0]["group"])
 
         plane_segmentation = PlaneSegmentation(id=roi_ids, **plane_segmentation_kwargs)
 
@@ -337,6 +344,12 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
             name="ROICentroids",
             description="The x, y, centroids of each ROI.",
             data=np.array(centroids),
+        )
+
+        plane_segmentation.add_column(
+            name="group_name",
+            description="The name of the stimulation group.",
+            data=np.array(stimulation_group_names),
         )
 
         image_segmentation.add_plane_segmentation(plane_segmentations=[plane_segmentation])
