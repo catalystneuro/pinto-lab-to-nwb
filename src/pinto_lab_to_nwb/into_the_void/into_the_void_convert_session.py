@@ -86,6 +86,12 @@ def session_to_nwb(
     editable_metadata = load_dict_from_file(editable_metadata_path)
     metadata = dict_deep_update(metadata, editable_metadata)
 
+    # Update metadata with the holographic stimulation data
+    if "HolographicStimulation" in converter.data_interface_objects:
+        holographic_stimulation_metadata_path = Path(__file__).parent / "holographic_stimulation_metadata.yaml"
+        holographic_metadata = load_dict_from_file(holographic_stimulation_metadata_path)
+        metadata = dict_deep_update(metadata, holographic_metadata)
+
     # Update metadata with subject_id and session_id from folder_path
     # NCCR51_2023_04_07_no_task_dual_color_jrgeco_t_series-001
     file_naming_pattern = r"^(?P<subject_id>[^_]+)_(?:\d{4}_\d{2}_\d{2}_)(?P<session_id>.+)"

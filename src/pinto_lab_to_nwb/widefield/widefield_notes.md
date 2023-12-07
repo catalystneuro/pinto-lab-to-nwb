@@ -19,6 +19,15 @@ ROI masks and Allen area labels for the binned session image (blue channel):
 - `"roi_from_ref_mat_file_path"`: The file path that contains the Allen area label of each pixel mapped onto the reference image of the mouse and registered to the session.
 - `"info_file_path"`: The file path that contains the information about the imaging session (e.g. number of frames, frame rate, etc.).
 
+## Behavioral data structure
+
+### Eye tracking data (Lightning Pose format)
+
+See the example folder structure [here](https://gin.g-node.org/CatalystNeuro/behavior_testing_data/src/master/lightningpose) for the Lightning Pose format.
+- `"lightning_pose_csv_file_path"`: The CSV file with the predictions on labeled data (x, y coordinates and confidence)
+- `"lightning_pose_original_video_file_path"`: The original video file (.mp4). The number of frames in this video should match the number of rows in the CSV file.
+- `"lightning_pose_labeled_video_file_path"`: The video file (.mp4) with the labeled data. (optional)
+
 ## Run conversion for a single session
 
 `widefield_convert_sesion.py`: this script defines the function to convert one full session of the conversion.
@@ -33,7 +42,10 @@ Parameters:
 - "`binned_vasculature_mask_file_path`": The file path that contains the contrast based vasculature mask on the downsampled (binned) session image (blue channel).
 - "`binned_blue_pca_mask_file_path`": The file path that contains the PCA mask for the blue channel.
 - "`binned_violet_pca_mask_file_path`": The file path that contains the PCA mask for the violet channel.
-- "`subject_metadata_file_path`": The file path that contains the subject metadata (e.g. subject_id, genotype, etc.).
+- "`subject_metadata_file_path`": The optional file path that contains the subject metadata (e.g. subject_id, genotype, etc.).
+- "`lightning_pose_csv_file_path`": Path to the .csv file that contains the predictions from Lightning Pose.
+- "`lightning_pose_original_video_file_path`": Path to the original video file (.mp4). The number of frames in this video should match the number of rows in the CSV file.
+- "`lightning_pose_labeled_video_file_path`": Path to the labeled video file (.mp4). (optional)
 
 ### Example usage
 
@@ -49,4 +61,4 @@ python widefield_convert_session.py
 
 ### Tutorials
 
-See the [widefield tutorial](./tutorials/widefield_demo.ipynb) that demonstrates how to read and access the data in NWB.
+See the [widefield tutorial](./tutorials/widefield_demo_with_eyetracking.ipynb) that demonstrates how to read and access the data in NWB.

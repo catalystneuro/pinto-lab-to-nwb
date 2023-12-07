@@ -6,6 +6,7 @@ import numpy as np
 from natsort import natsorted
 from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
+from neuroconv.converters import LightningPoseConverter
 from neuroconv.utils import DeepDict
 from pynwb import NWBFile
 
@@ -33,6 +34,7 @@ class WideFieldNWBConverter(NWBConverter):
         SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
         BehaviorViRMEN=ViRMENBehaviorInterface,
         BehaviorViRMENWidefieldTimeAligned=ViRMENTemporalAlignmentBehaviorInterface,
+        EyeTracking=LightningPoseConverter,
     )
 
     def __init__(self, source_data: Dict[str, dict], verbose: bool = True):

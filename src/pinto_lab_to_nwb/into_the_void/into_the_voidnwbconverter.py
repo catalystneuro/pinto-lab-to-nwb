@@ -1,13 +1,15 @@
 """Primary NWBConverter class for this dataset."""
+from pathlib import Path
 from typing import Optional
 
 from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
-from neuroconv.utils import FilePathType, FolderPathType, DeepDict
+from neuroconv.utils import FilePathType, FolderPathType, DeepDict, dict_deep_update
 from pynwb import NWBFile
 
+from pinto_lab_to_nwb.into_the_void.interfaces import HolographicStimulationInterface
 from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENTemporalAlignmentBehaviorInterface
 
 
@@ -93,6 +95,13 @@ class IntoTheVoidNWBConverter(NWBConverter):
                 Imaging=BrukerTiffSinglePlaneConverter(folder_path=imaging_folder_path, verbose=verbose),
             )
 
+        if list(Path(imaging_folder_path).glob("*MarkPoints*.xml")):
+            self.data_interface_objects.update(
+                HolographicStimulation=HolographicStimulationInterface(
+                    folder_path=imaging_folder_path, verbose=verbose
+                ),
+            )
+
         if segmentation_folder_path:
             available_planes = Suite2pSegmentationInterface.get_available_planes(folder_path=segmentation_folder_path)
             available_channels = Suite2pSegmentationInterface.get_available_channels(
@@ -170,6 +179,10 @@ class IntoTheVoidNWBConverter(NWBConverter):
             # Explicitly set session_start_time to ViRMEN start time
             session_start_time = self.data_interface_objects["BehaviorViRMEN"]._get_session_start_time()
             metadata["NWBFile"]["session_start_time"] = session_start_time
+
+        if "HolographicStimulation" in self.data_interface_objects:
+            holographic_metadata = self.data_interface_objects["HolographicStimulation"].get_metadata()
+            metadata = dict_deep_update(metadata, holographic_metadata)
 
         return metadata
 

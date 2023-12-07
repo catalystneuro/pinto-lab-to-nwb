@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
+import pandas as pd
 from dateutil import tz
 from neuroconv.utils import (
     load_dict_from_file,
@@ -11,8 +12,26 @@ from neuroconv.utils import (
     FilePathType,
 )
 
+from ndx_pose import PoseEstimation
 from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.widefield import WideFieldNWBConverter
+
+import logging
+
+# Get the logger used by tifffile
+tifffile_logger = logging.getLogger("tifffile")
+
+
+# Define a custom filter class
+class CustomWarningFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out warnings with the specific message
+        return "tifffile" not in record.getMessage()
+
+
+# Add the custom filter to the tifffile logger
+custom_filter = CustomWarningFilter()
+tifffile_logger.addFilter(custom_filter)
 
 
 def session_to_nwb(
@@ -28,6 +47,10 @@ def session_to_nwb(
     binned_vasculature_mask_file_path: FilePathType,
     binned_blue_pca_mask_file_path: FilePathType,
     binned_violet_pca_mask_file_path: FilePathType,
+    lightning_pose_csv_file_path: Optional[FilePathType] = None,
+    lightning_pose_original_video_file_path: Optional[FilePathType] = None,
+    lightning_pose_labeled_video_file_path: Optional[FilePathType] = None,
+    sync_data_file_path: Optional[FilePathType] = None,
     subject_metadata_file_path: Optional[FilePathType] = None,
     virmen_file_path: Optional[FilePathType] = None,
     widefield_time_sync_file_path: Optional[FilePathType] = None,
@@ -62,6 +85,14 @@ def session_to_nwb(
         The file path that contains the PCA mask for the blue channel.
     binned_violet_pca_mask_file_path: FilePathType
         The file path that contains the PCA mask for the violet channel.
+    lightning_pose_csv_file_path: FilePathType, optional
+        The file path to the lightning pose csv file.
+    lightning_pose_original_video_file_path: FilePathType, optional
+        The file path to the lightning pose original video file. (.mp4 file)
+    lightning_pose_labeled_video_file_path: FilePathType, optional
+        The file path to the lightning pose labeled video file. (.mp4 file)
+    sync_data_file_path: FilePathType, optional
+        The file path that contains the timestamps to use for aligning the eye tracking data to imaging (sync_data.csv).
     subject_metadata_file_path: FilePathType, optional
         The file path to the subject metadata file. This file should contain the 'metadata' key.
     virmen_file_path: FilePathType, optional
@@ -168,7 +199,49 @@ def session_to_nwb(
         )
         source_data.update(BehaviorViRMENWidefieldTimeAligned=time_alignment_behavior_source_data)
 
+    if lightning_pose_csv_file_path:
+        lightning_pose_source_data = dict(
+            file_path=str(lightning_pose_csv_file_path),
+            original_video_file_path=str(lightning_pose_original_video_file_path),
+            labeled_video_file_path=str(lightning_pose_labeled_video_file_path),
+        )
+        source_data.update(dict(EyeTracking=lightning_pose_source_data))
+
+        conversion_options.update(
+            dict(
+                EyeTracking=dict(
+                    stub_test=stub_test,
+                    reference_frame="(0,0) corresponds to the top left corner of the video.",
+                )
+            )
+        )
+
     converter = WideFieldNWBConverter(source_data=source_data)
+
+    # Set aligned timestamps for LightningPose
+    if "EyeTracking" in converter.data_interface_objects:
+        if sync_data_file_path is None:
+            raise ValueError(
+                "'sync_data_file_path' must be provided when pose estimation data is added to the NWB file."
+            )
+        sync_data = pd.read_csv(sync_data_file_path)
+        aligned_timestamps = sync_data["im_frame_timestamps"].values
+        lightning_pose_converter = converter.data_interface_objects["EyeTracking"]
+        pose_estimation_interface = lightning_pose_converter.data_interface_objects["PoseEstimation"]
+        original_timestamps = pose_estimation_interface.get_original_timestamps()
+        # the timestamps in the sync_data is one frame longer than the original timestamps
+        aligned_timestamps = aligned_timestamps[: len(original_timestamps)]
+        assert len(aligned_timestamps) == len(
+            original_timestamps
+        ), "The length of the aligned timestamps must match the length of the original timestamps."
+        pose_estimation_interface.set_aligned_timestamps(aligned_timestamps=aligned_timestamps)
+        lightning_pose_converter.data_interface_objects["OriginalVideo"].set_aligned_timestamps(
+            aligned_timestamps=[aligned_timestamps]
+        )
+        if "LabeledVideo" in lightning_pose_converter.data_interface_objects:
+            lightning_pose_converter.data_interface_objects["LabeledVideo"].set_aligned_timestamps(
+                aligned_timestamps=[aligned_timestamps]
+            )
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
@@ -210,7 +283,7 @@ if __name__ == "__main__":
 
     # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
     imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
-    # imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
+    #imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
     # The file path to the strobe sequence file.
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
     # The file path to the downsampled imaging data in Matlab format (.mat file).
@@ -245,9 +318,7 @@ if __name__ == "__main__":
     subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
 
     # The file path to the ViRMEN .mat file.
-    virmen_file_path = "/Volumes/t7-ssd/Pinto/Behavior/DrChicken_TowersTaskSwitchEasy_Session_20230419_105733.mat"
-    # The file path to that points to the .mat file containing the timestamps for the behavior data.
-    behavior_timestamps_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230801/sync_data.csv"
+    virmen_file_path = "/Volumes/t7-ssd/Pinto/Behavior/Cherry_TowersTaskSwitch_Session_20230802_104420.mat"
 
     # Parameters for the Widefield time alignment
     widefield_time_sync_file_path = imaging_folder_path / "wf_behav_sync.mat"
@@ -256,8 +327,22 @@ if __name__ == "__main__":
     # The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
     im_frame_timestamps_name = "im_frame_timestamps"
 
+    # Parameters for eye tracking
+    # Path to the .csv file that contains the predictions from Lightning Pose.
+    lightning_pose_csv_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz_heatmap.csv"
+    # Path to the original video file (.mp4).
+    lightning_pose_original_video_file_path = (
+        "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz.mp4"
+    )
+    # Path to the labeled video file (.mp4).
+    lightning_pose_labeled_video_file_path = (
+        "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/Cherry_20230802_30hz_heatmap_labeled.mp4"
+    )
+    # Path to the aligned timestamps for the eye tracking data.
+    sync_data_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/sync_data.csv"
+
     # The file path to the NWB file that will be created.
-    nwbfile_path = Path("/Users/weian/data/full_Cherry_20230802.nwb")
+    nwbfile_path = Path("/Users/weian/data/Cherry_20230802_30hz.nwb")
 
     stub_test = False
 
@@ -274,6 +359,10 @@ if __name__ == "__main__":
         binned_vasculature_mask_file_path=binned_vasculature_mask_file_path,
         binned_blue_pca_mask_file_path=binned_blue_pca_mask_file_path,
         binned_violet_pca_mask_file_path=binned_violet_pca_mask_file_path,
+        lightning_pose_csv_file_path=lightning_pose_csv_file_path,
+        lightning_pose_original_video_file_path=lightning_pose_original_video_file_path,
+        lightning_pose_labeled_video_file_path=lightning_pose_labeled_video_file_path,
+        sync_data_file_path=sync_data_file_path,
         subject_metadata_file_path=subject_metadata_file_path,
         virmen_file_path=virmen_file_path,
         widefield_time_sync_file_path=widefield_time_sync_file_path,
