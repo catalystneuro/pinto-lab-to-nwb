@@ -166,6 +166,11 @@ class IntoTheVoidNWBConverter(NWBConverter):
             # override device link
             metadata["Ophys"]["ImagingPlane"][metadata_ind]["device"] = device_name
 
+        if "BehaviorViRMEN" in self.data_interface_objects:
+            # Explicitly set session_start_time to ViRMEN start time
+            session_start_time = self.data_interface_objects["BehaviorViRMEN"]._get_session_start_time()
+            metadata["NWBFile"]["session_start_time"] = session_start_time
+
         return metadata
 
     def temporally_align_data_interfaces(self):

@@ -47,9 +47,11 @@ class WideFieldNWBConverter(NWBConverter):
         self._motion_correction_data = load_motion_correction_data(file_paths=motion_correction_mat_files)
 
     def get_metadata(self) -> DeepDict:
-        metadata = super().get_metadata()
+        if "BehaviorViRMEN" not in self.data_interface_objects:
+            return super().get_metadata()
 
         # Explicitly set session_start_time to ViRMEN start time
+        metadata = super().get_metadata()
         session_start_time = self.data_interface_objects["BehaviorViRMEN"]._get_session_start_time()
         metadata["NWBFile"]["session_start_time"] = session_start_time
 
