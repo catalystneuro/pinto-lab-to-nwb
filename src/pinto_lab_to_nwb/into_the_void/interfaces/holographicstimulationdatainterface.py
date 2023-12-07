@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+from hdmf.backends.hdf5 import H5DataIO
 from neuroconv import BaseTemporalAlignmentInterface
 from neuroconv.tools import get_module
 from neuroconv.tools.roiextractors import add_imaging_plane
@@ -360,7 +361,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         holographic_series = PatternedOptogeneticSeries(
             name="HolographicStimulationSeries",
             description="The holographic stimulation for each ROI.",
-            data=data,
+            data=H5DataIO(data, compression="gzip"),
             unit="watts",
             timestamps=timestamps,
             rois=roi_table_region,
