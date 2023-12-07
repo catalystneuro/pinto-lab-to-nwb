@@ -21,11 +21,13 @@ import logging
 # Get the logger used by tifffile
 tifffile_logger = logging.getLogger("tifffile")
 
+
 # Define a custom filter class
 class CustomWarningFilter(logging.Filter):
     def filter(self, record):
         # Filter out warnings with the specific message
         return "tifffile" not in record.getMessage()
+
 
 # Add the custom filter to the tifffile logger
 custom_filter = CustomWarningFilter()
