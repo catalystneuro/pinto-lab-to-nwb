@@ -61,4 +61,4 @@ python widefield_convert_session.py
 
 ### Tutorials
 
-See the [widefield tutorial](./tutorials/widefield_demo.ipynb) that demonstrates how to read and access the data in NWB.
+See the [widefield tutorial](./tutorials/widefield_demo_with_eyetracking.ipynb) that demonstrates how to read and access the data in NWB.
