@@ -261,6 +261,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
 
         add_imaging_plane(nwbfile=nwbfile, metadata=metadata_copy, imaging_plane_name=imaging_plane_name)
 
+        # TODO: after pining hdmf to dev version reuse Bruker device instead of creating a new one
         device_name = "device"
         device = nwbfile.devices[device_name]
 
@@ -291,18 +292,16 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
         # Add SLM device to NWBFile
         spatial_light_modulator_metadata = metadata_copy["Ophys"]["OptogeneticDevice"]["SpatialLightModulator"]
         spatial_light_modulator_name = spatial_light_modulator_metadata["name"]
-        if spatial_light_modulator_name in nwbfile.devices:
-            raise ValueError(f"'{spatial_light_modulator_name}' already added to the NWBFile.")
-        spatial_light_modulator = SpatialLightModulator(**spatial_light_modulator_metadata)
-        nwbfile.add_device(spatial_light_modulator)
+        if spatial_light_modulator_name not in nwbfile.devices:
+            nwbfile.add_device(SpatialLightModulator(**spatial_light_modulator_metadata))
+        spatial_light_modulator = nwbfile.devices[spatial_light_modulator_name]
 
         # Add light source device to NWBFile
         light_source_metadata = metadata_copy["Ophys"]["OptogeneticDevice"]["LightSource"]
         light_source_name = light_source_metadata["name"]
-        if light_source_name in nwbfile.devices:
-            raise ValueError(f"'{light_source_name}' already added to the NWBFile.")
-        light_source = LightSource(**light_source_metadata)
-        nwbfile.add_device(light_source)
+        if light_source_name not in nwbfile.devices:
+            nwbfile.add_device(LightSource(**light_source_metadata))
+        light_source = nwbfile.devices[light_source_name]
 
         # Add plane segmentation to NWBFile
         add_image_segmentation(nwbfile=nwbfile, metadata=metadata)
