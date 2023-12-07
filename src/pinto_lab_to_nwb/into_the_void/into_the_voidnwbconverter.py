@@ -1,11 +1,14 @@
 """Primary NWBConverter class for this dataset."""
+from pathlib import Path
 from typing import Optional
 
 from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
-from neuroconv.utils import FolderPathType, DeepDict
+
+from pinto_lab_to_nwb.into_the_void.interfaces import HolographicStimulationInterface
+from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
 from pynwb import NWBFile
 
 
@@ -27,11 +30,12 @@ def get_default_segmentation_to_imaging_name_mapping(
         plane_separation_type="disjoint",
     )
 
+    plane_streams = [
+        plane_name for channel_name in streams["plane_streams"] for plane_name in streams["plane_streams"][channel_name]
+    ]
+
     available_channels = Suite2pSegmentationInterface.get_available_channels(folder_path=segmentation_folder_path)
     available_planes = Suite2pSegmentationInterface.get_available_planes(folder_path=segmentation_folder_path)
-
-    if len(available_planes) == 1 and len(available_channels) == 1:
-        return None
 
     segmentation_channel_plane_names = [
         f"{channel_name.capitalize()}{plane_name.capitalize()}"
@@ -39,14 +43,12 @@ def get_default_segmentation_to_imaging_name_mapping(
         for channel_name in available_channels
     ]
 
-    if len(available_planes) > 1:
-        imaging_channel_plane_names = [
-            plane_name
-            for channel_name in streams["plane_streams"]
-            for plane_name in streams["plane_streams"][channel_name]
-        ]
+    num_channels = len(streams["channel_streams"])
+    num_planes = 1 if not plane_streams else len(plane_streams)
+    if num_channels == 1 and num_planes == 1:
+        imaging_channel_plane_names = [None]
     else:
-        imaging_channel_plane_names = streams["channel_streams"]
+        imaging_channel_plane_names = plane_streams if num_planes == 1 else streams["channel_streams"]
 
     segmentation_to_imaging_name_mapping = dict(zip(segmentation_channel_plane_names, imaging_channel_plane_names))
 
@@ -88,6 +90,13 @@ class IntoTheVoidNWBConverter(NWBConverter):
                 Imaging=BrukerTiffSinglePlaneConverter(folder_path=imaging_folder_path, verbose=verbose),
             )
 
+        if list(Path(imaging_folder_path).glob("*MarkPoints*.xml")):
+            self.data_interface_objects.update(
+                HolographicStimulation=HolographicStimulationInterface(
+                    folder_path=imaging_folder_path, verbose=verbose
+                ),
+            )
+
         if segmentation_folder_path:
             available_planes = Suite2pSegmentationInterface.get_available_planes(folder_path=segmentation_folder_path)
             available_channels = Suite2pSegmentationInterface.get_available_channels(
@@ -120,9 +129,10 @@ class IntoTheVoidNWBConverter(NWBConverter):
                         verbose=verbose,
                     )
                     if self.plane_map:
-                        plane_segmentation_name = "PlaneSegmentation" + self.plane_map.get(
-                            plane_name_suffix, None
-                        ).replace("_", "")
+                        mapped_plane_suffix = self.plane_map.get(plane_name_suffix, None)
+                        plane_segmentation_name = "PlaneSegmentation"
+                        if mapped_plane_suffix is not None:
+                            plane_segmentation_name = "PlaneSegmentation" + mapped_plane_suffix.replace("_", "")
                         segmentation_source_data.update(
                             plane_segmentation_name=plane_segmentation_name,
                         )
@@ -132,9 +142,6 @@ class IntoTheVoidNWBConverter(NWBConverter):
                     )
 
     def get_metadata(self) -> DeepDict:
-        if not self.plane_map:
-            return super().get_metadata()
-
         imaging_metadata = self.data_interface_objects["Imaging"].get_metadata()
         metadata = super().get_metadata()
 
@@ -150,6 +157,10 @@ class IntoTheVoidNWBConverter(NWBConverter):
 
             # override device link
             metadata["Ophys"]["ImagingPlane"][metadata_ind]["device"] = device_name
+
+        if "HolographicStimulation" in self.data_interface_objects:
+            holographic_metadata = self.data_interface_objects["HolographicStimulation"].get_metadata()
+            metadata = dict_deep_update(metadata, holographic_metadata)
 
         return metadata
 
