@@ -283,7 +283,7 @@ if __name__ == "__main__":
 
     # The folder path that contains the raw imaging data in Micro-Manager OME-TIF format (.ome.tif files).
     imaging_folder_path = Path("/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1")
-    #imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
+    # imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/DrChicken_20230419_20hz")
     # The file path to the strobe sequence file.
     strobe_sequence_file_path = imaging_folder_path / "strobe_seq_1_2.mat"
     # The file path to the downsampled imaging data in Matlab format (.mat file).
