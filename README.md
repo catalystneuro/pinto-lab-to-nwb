@@ -143,7 +143,11 @@ Ophys:
 ```
 See the [conserion notes](src/pinto_lab_to_nwb/into_the_void/into_the_void_notes.md) for more details on the expected data format.
 
-## NWB tutorials
+## Interacting with the NWB files
+
+We created tutorials for each conversion that demonstrate how to interact with the NWB files created by the conversion scripts.
+
+### NWB tutorials
 
 The `tutorials` directory contains Jupyter notebooks that demonstrate how to use the NWB files created by the conversion scripts.
 
@@ -154,4 +158,6 @@ pip install jupyter
 cd src/pinto_lab_to_nwb/into_the_void/tutorials
 jupyter lab
 ```
-![tutorial header](src/pinto_lab_to_nwb/into_the_void/tutorials/tutorial_header.png)
+<img src="src/pinto_lab_to_nwb/into_the_void/tutorials/tutorial_header.png" alt="tutorial header" width="800"/>
+
+We recommend installing NWB GUIDE ([installation instructions](https://nwb-guide.readthedocs.io/en/latest/installation.html)) to visualize the NWB files.
