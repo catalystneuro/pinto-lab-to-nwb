@@ -15,6 +15,22 @@ from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.into_the_void import IntoTheVoidNWBConverter
 from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_segmentation_to_imaging_name_mapping
 
+import logging
+
+# Get the logger used by tifffile
+tifffile_logger = logging.getLogger("tifffile")
+
+
+# Define a custom filter class
+class CustomWarningFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out warnings with the specific message
+        return "<tifffile.read_uic_tag>" not in record.getMessage()
+
+
+# Add the filter to the logger
+tifffile_logger.addFilter(CustomWarningFilter())
+
 
 def session_to_nwb(
     nwbfile_path: FilePathType,
@@ -120,7 +136,7 @@ if __name__ == "__main__":
     # Parameters for conversion
 
     # The folder path that contains the Bruker TIF imaging output (.ome.tif files).
-    imaging_folder_path = Path("/Users/weian/data/NCCR51_2023_04_07_no_task_dual_color_jrgeco_t_series-001")
+    imaging_folder_path = Path("/Users/weian/data/NCCR32_2023_02_20_Into_the_void_t_series_stim-000")
     # The folder that contains the Suite2P segmentation output.
     segmentation_folder_path = imaging_folder_path / "suite2p"
 
@@ -128,7 +144,7 @@ if __name__ == "__main__":
     subject_metadata_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat")
 
     # The file path to the ViRMEN .mat file.
-    virmen_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/NCCR51_TowersTaskSwitchEasy_Session_20230407_143948.mat")
+    virmen_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/NCCR32_IntoTheVoid_Session_20230220_155834.mat")
 
     # Parameters for the Bruker time alignment
     # todo: replace this with real data once we received it
