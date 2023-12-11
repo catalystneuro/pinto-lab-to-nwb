@@ -15,13 +15,33 @@ from pinto_lab_to_nwb.general import make_subject_metadata
 from pinto_lab_to_nwb.into_the_void import IntoTheVoidNWBConverter
 from pinto_lab_to_nwb.into_the_void.into_the_voidnwbconverter import get_default_segmentation_to_imaging_name_mapping
 
+import logging
+
+# Get the logger used by tifffile
+tifffile_logger = logging.getLogger("tifffile")
+
+
+# Define a custom filter class
+class CustomWarningFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out warnings with the specific message
+        return "<tifffile.read_uic_tag>" not in record.getMessage()
+
+
+# Add the filter to the logger
+tifffile_logger.addFilter(CustomWarningFilter())
+
 
 def session_to_nwb(
     nwbfile_path: FilePathType,
     two_photon_imaging_folder_path: FolderPathType,
     segmentation_folder_path: FolderPathType,
-    subject_metadata_file_path: Optional[FilePathType] = None,
     segmentation_to_imaging_plane_map: dict = None,
+    subject_metadata_file_path: Optional[FilePathType] = None,
+    virmen_file_path: Optional[FilePathType] = None,
+    two_photon_time_sync_file_path: Optional[FilePathType] = None,
+    two_photon_time_sync_struct_name: Optional[str] = None,
+    im_frame_timestamps_name: Optional[str] = None,
     stub_test: bool = False,
 ):
     """
@@ -35,10 +55,19 @@ def session_to_nwb(
         The folder path that contains the Bruker TIF imaging output (.ome.tif files).
     segmentation_folder_path: FolderPathType
         The folder that contains the Suite2P segmentation output.
-    subject_metadata_file_path: FilePathType, optional
-        The file path to the subject metadata file ('subject_metadata.mat').
     segmentation_to_imaging_plane_map: dict, optional
         The optional mapping between the imaging and segmentation planes.
+    subject_metadata_file_path: FilePathType, optional
+        The file path to the .mat file containing the subject metadata.
+    virmen_file_path: FilePathType, optional
+        The file path to the ViRMEN .mat file.
+    two_photon_time_sync_file_path: FilePathType, optional
+        The file path to that points to the .mat file containing the timestamps for the imaging data.
+        These timestamps are used to set the times of the widefield imaging data in the NWB file.
+    two_photon_time_sync_struct_name: str, optional
+        The name of the sync data struct in the .mat file. (e.g. "wf_behav_sync_data")
+    im_frame_timestamps_name: str, optional
+        The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -48,11 +77,17 @@ def session_to_nwb(
         imaging_folder_path=imaging_folder_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_map=segmentation_to_imaging_plane_map,
+        virmen_file_path=virmen_file_path,
+        two_photon_time_sync_file_path=two_photon_time_sync_file_path,
+        two_photon_time_sync_struct_name=two_photon_time_sync_struct_name,
+        im_frame_timestamps_name=im_frame_timestamps_name,
         verbose=True,
     )
 
     conversion_options = {
-        interface_name: dict(stub_test=stub_test) for interface_name in converter.data_interface_objects.keys()
+        interface_name: dict(stub_test=stub_test)
+        for interface_name in converter.data_interface_objects.keys()
+        if interface_name not in ["BehaviorViRMEN", "BehaviorViRMENTwoPhotonTimeAligned"]
     }
 
     # Add datetime to conversion
@@ -101,11 +136,24 @@ if __name__ == "__main__":
     # Parameters for conversion
 
     # The folder path that contains the Bruker TIF imaging output (.ome.tif files).
-    imaging_folder_path = Path("/Volumes/t7-ssd/Pinto/NCCR32_2022_11_03_IntoTheVoid_t_series-005")
+    imaging_folder_path = Path("/Users/weian/data/NCCR32_2023_02_20_Into_the_void_t_series_stim-000")
     # The folder that contains the Suite2P segmentation output.
     segmentation_folder_path = imaging_folder_path / "suite2p"
-    # The file path to the subject metadata file.
-    subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
+
+    # The file path to the .mat file containing the subject metadata.
+    subject_metadata_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat")
+
+    # The file path to the ViRMEN .mat file.
+    virmen_file_path = Path("/Volumes/t7-ssd/Pinto/Behavior/NCCR32_IntoTheVoid_Session_20230220_155834.mat")
+
+    # Parameters for the Bruker time alignment
+    # todo: replace this with real data once we received it
+    two_photon_time_sync_file_path = "/Users/weian/data/Cherry/20230802/Cherry_20230802_20hz_1/wf_behav_sync.mat"
+    # The name of the struct in the .mat file that contains the timestamps for the imaging data.
+    two_photon_time_sync_struct_name = "wf_behav_sync_data"
+    # The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
+    im_frame_timestamps_name = "im_frame_timestamps"
+
     # The folder path that will contain the NWB files.
     nwbfile_folder_path = Path("/Volumes/t7-ssd/Pinto/nwbfiles")
     # For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
@@ -122,8 +170,12 @@ if __name__ == "__main__":
     session_to_nwb(
         nwbfile_path=nwbfile_path,
         two_photon_imaging_folder_path=imaging_folder_path,
-        subject_metadata_file_path=subject_metadata_file_path,
         segmentation_folder_path=segmentation_folder_path,
         segmentation_to_imaging_plane_map=plane_map,
+        subject_metadata_file_path=subject_metadata_file_path,
+        virmen_file_path=virmen_file_path,
+        two_photon_time_sync_file_path=two_photon_time_sync_file_path,
+        two_photon_time_sync_struct_name=two_photon_time_sync_struct_name,
+        im_frame_timestamps_name=im_frame_timestamps_name,
         stub_test=stub_test,
     )

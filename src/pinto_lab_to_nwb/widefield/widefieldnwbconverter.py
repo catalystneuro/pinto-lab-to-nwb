@@ -7,10 +7,11 @@ from natsort import natsorted
 from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
 from neuroconv.converters import LightningPoseConverter
+from neuroconv.utils import DeepDict
 from pynwb import NWBFile
 
-from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data
-from pinto_lab_to_nwb.widefield.utils.motion_correction import add_motion_correction
+from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENTemporalAlignmentBehaviorInterface
+from pinto_lab_to_nwb.widefield.utils import load_motion_correction_data, add_motion_correction
 from pinto_lab_to_nwb.widefield.interfaces import (
     WidefieldImagingInterface,
     WidefieldProcessedImagingInterface,
@@ -31,6 +32,8 @@ class WideFieldNWBConverter(NWBConverter):
         SegmentationProcessedBlue=WidefieldProcessedSegmentationinterface,
         SummaryImagesBlue=WidefieldSegmentationImagesBlueInterface,
         SummaryImagesViolet=WidefieldSegmentationImagesVioletInterface,
+        BehaviorViRMEN=ViRMENBehaviorInterface,
+        BehaviorViRMENWidefieldTimeAligned=ViRMENTemporalAlignmentBehaviorInterface,
         EyeTracking=LightningPoseConverter,
     )
 
@@ -44,6 +47,17 @@ class WideFieldNWBConverter(NWBConverter):
         motion_correction_mat_files = natsorted(Path(imaging_folder_path).glob(f"{imaging_folder_name}*mcorr_1.mat"))
         assert motion_correction_mat_files, f"No motion correction files found in {imaging_folder_path}."
         self._motion_correction_data = load_motion_correction_data(file_paths=motion_correction_mat_files)
+
+    def get_metadata(self) -> DeepDict:
+        if "BehaviorViRMEN" not in self.data_interface_objects:
+            return super().get_metadata()
+
+        # Explicitly set session_start_time to ViRMEN start time
+        metadata = super().get_metadata()
+        session_start_time = self.data_interface_objects["BehaviorViRMEN"]._get_session_start_time()
+        metadata["NWBFile"]["session_start_time"] = session_start_time
+
+        return metadata
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
@@ -74,3 +88,27 @@ class WideFieldNWBConverter(NWBConverter):
                 one_photon_series_name=one_photon_series_name,
                 convert_to_dtype=np.uint16,
             )
+
+    def temporally_align_data_interfaces(self):
+        if "BehaviorViRMENWidefieldTimeAligned" not in self.data_interface_objects:
+            return
+
+        frame_time_aligned_behavior_interface = self.data_interface_objects["BehaviorViRMENWidefieldTimeAligned"]
+        blue_frames_timestamps = frame_time_aligned_behavior_interface.get_timestamps()
+
+        # Set aligned timestamps for imaging interfaces
+        imaging_interface = self.data_interface_objects["ImagingBlue"]
+        imaging_interface.set_aligned_timestamps(aligned_timestamps=blue_frames_timestamps)
+
+        downsampled_imaging_interface = self.data_interface_objects["ProcessedImagingBlue"]
+        downsampled_imaging_interface.set_aligned_timestamps(aligned_timestamps=blue_frames_timestamps)
+
+        violet_interface = self.data_interface_objects["ImagingViolet"]
+        violet_interface.align_by_interpolation(
+            aligned_timestamps=blue_frames_timestamps, unaligned_timestamps=violet_interface.imaging_extractor._times
+        )
+        downsampled_violet_interface = self.data_interface_objects["ProcessedImagingViolet"]
+        downsampled_violet_interface.align_by_interpolation(
+            aligned_timestamps=blue_frames_timestamps,
+            unaligned_timestamps=downsampled_violet_interface.imaging_extractor._times,
+        )

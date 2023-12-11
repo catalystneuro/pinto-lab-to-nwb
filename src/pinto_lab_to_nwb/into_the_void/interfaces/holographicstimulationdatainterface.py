@@ -217,7 +217,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
 
     def get_metadata(self) -> dict:
         metadata = get_default_ophys_metadata()
-        device_name = "device"  # ndx-holographic-stimulation requires a device named "device"
+        device_name = "BrukerFluorescenceMicroscope"  # reuse Bruker device
         metadata["Ophys"]["Device"][0].update(name=device_name)
         plane_suffix = self.plane_segmentation_name.replace("PlaneSegmentation", "")
         imaging_plane_name = "ImagingPlane" + plane_suffix
@@ -262,8 +262,7 @@ class HolographicStimulationInterface(BaseTemporalAlignmentInterface):
 
         add_imaging_plane(nwbfile=nwbfile, metadata=metadata_copy, imaging_plane_name=imaging_plane_name)
 
-        # TODO: after pining hdmf to dev version reuse Bruker device instead of creating a new one
-        device_name = "device"
+        device_name = metadata_copy["Ophys"]["Device"][0]["name"]
         device = nwbfile.devices[device_name]
 
         # Add stimulus pattern to NWBFile

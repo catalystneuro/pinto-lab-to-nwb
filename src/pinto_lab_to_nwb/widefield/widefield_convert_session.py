@@ -52,6 +52,10 @@ def session_to_nwb(
     lightning_pose_labeled_video_file_path: Optional[FilePathType] = None,
     sync_data_file_path: Optional[FilePathType] = None,
     subject_metadata_file_path: Optional[FilePathType] = None,
+    virmen_file_path: Optional[FilePathType] = None,
+    widefield_time_sync_file_path: Optional[FilePathType] = None,
+    widefield_time_sync_struct_name: Optional[str] = None,
+    im_frame_timestamps_name: Optional[str] = None,
     stub_test: bool = False,
 ):
     """
@@ -91,6 +95,15 @@ def session_to_nwb(
         The file path that contains the timestamps to use for aligning the eye tracking data to imaging (sync_data.csv).
     subject_metadata_file_path: FilePathType, optional
         The file path to the subject metadata file. This file should contain the 'metadata' key.
+    virmen_file_path: FilePathType, optional
+        The file path to the ViRMEN .mat file.
+    widefield_time_sync_file_path: FilePathType, optional
+        The file path to that points to the .mat file containing the timestamps for the imaging data.
+        These timestamps are used to set the times of the widefield imaging data in the NWB file.
+    widefield_time_sync_struct_name: str, optional
+        The name of the sync data struct in the .mat file. (e.g. "wf_behav_sync_data")
+    im_frame_timestamps_name: str, optional
+        The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
     stub_test: bool, optional
         For testing purposes, when stub_test=True only writes a subset of imaging and segmentation data.
     """
@@ -173,6 +186,18 @@ def session_to_nwb(
             ),
         )
     )
+
+    # Add behavior
+    if virmen_file_path:
+        source_data.update(BehaviorViRMEN=dict(file_path=str(virmen_file_path)))
+
+    if widefield_time_sync_file_path:
+        time_alignment_behavior_source_data = dict(
+            file_path=str(widefield_time_sync_file_path),
+            sync_data_struct_name=widefield_time_sync_struct_name,
+            im_frame_timestamps_name=im_frame_timestamps_name,
+        )
+        source_data.update(BehaviorViRMENWidefieldTimeAligned=time_alignment_behavior_source_data)
 
     if lightning_pose_csv_file_path:
         lightning_pose_source_data = dict(
@@ -291,7 +316,16 @@ if __name__ == "__main__":
     binned_violet_pca_mask_file_path = imaging_folder_path / "violet_pca_vasculature_mask_2.mat"
 
     subject_metadata_file_path = "/Volumes/t7-ssd/Pinto/Behavior/subject_metadata.mat"
-    # The file path to the NWB file that will be created.
+
+    # The file path to the ViRMEN .mat file.
+    virmen_file_path = "/Volumes/t7-ssd/Pinto/Behavior/Cherry_TowersTaskSwitch_Session_20230802_104420.mat"
+
+    # Parameters for the Widefield time alignment
+    widefield_time_sync_file_path = imaging_folder_path / "wf_behav_sync.mat"
+    # The name of the struct in the .mat file that contains the timestamps for the imaging data.
+    widefield_time_sync_struct_name = "wf_behav_sync_data"
+    # The name of the variable in the .mat file that contains the aligned timestamps for the imaging frames.
+    im_frame_timestamps_name = "im_frame_timestamps"
 
     # Parameters for eye tracking
     # Path to the .csv file that contains the predictions from Lightning Pose.
@@ -307,7 +341,8 @@ if __name__ == "__main__":
     # Path to the aligned timestamps for the eye tracking data.
     sync_data_file_path = "/Volumes/t7-ssd/Pinto/eyetracking/Cherry_20230802/sync_data.csv"
 
-    nwbfile_path = Path("/Users/weian/data/full_Cherry_20230802.nwb")
+    # The file path to the NWB file that will be created.
+    nwbfile_path = Path("/Users/weian/data/Cherry_20230802_30hz.nwb")
 
     stub_test = False
 
@@ -329,5 +364,9 @@ if __name__ == "__main__":
         lightning_pose_labeled_video_file_path=lightning_pose_labeled_video_file_path,
         sync_data_file_path=sync_data_file_path,
         subject_metadata_file_path=subject_metadata_file_path,
+        virmen_file_path=virmen_file_path,
+        widefield_time_sync_file_path=widefield_time_sync_file_path,
+        widefield_time_sync_struct_name=widefield_time_sync_struct_name,
+        im_frame_timestamps_name=im_frame_timestamps_name,
         stub_test=stub_test,
     )

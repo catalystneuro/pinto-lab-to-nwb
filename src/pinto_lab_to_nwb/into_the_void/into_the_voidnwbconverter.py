@@ -6,10 +6,11 @@ from ndx_pinto_metadata import SubjectExtension
 from neuroconv import NWBConverter
 from neuroconv.datainterfaces import Suite2pSegmentationInterface, BrukerTiffMultiPlaneImagingInterface
 from neuroconv.converters import BrukerTiffSinglePlaneConverter, BrukerTiffMultiPlaneConverter
+from neuroconv.utils import FilePathType, FolderPathType, DeepDict, dict_deep_update
+from pynwb import NWBFile
 
 from pinto_lab_to_nwb.into_the_void.interfaces import HolographicStimulationInterface
-from neuroconv.utils import FolderPathType, DeepDict, dict_deep_update
-from pynwb import NWBFile
+from pinto_lab_to_nwb.behavior.interfaces import ViRMENBehaviorInterface, ViRMENTemporalAlignmentBehaviorInterface
 
 
 def get_default_segmentation_to_imaging_name_mapping(
@@ -48,7 +49,7 @@ def get_default_segmentation_to_imaging_name_mapping(
     if num_channels == 1 and num_planes == 1:
         imaging_channel_plane_names = [None]
     else:
-        imaging_channel_plane_names = plane_streams if num_planes == 1 else streams["channel_streams"]
+        imaging_channel_plane_names = plane_streams if num_planes != 1 else streams["channel_streams"]
 
     segmentation_to_imaging_name_mapping = dict(zip(segmentation_channel_plane_names, imaging_channel_plane_names))
 
@@ -64,6 +65,10 @@ class IntoTheVoidNWBConverter(NWBConverter):
         verbose: bool = False,
         segmentation_folder_path: Optional[FolderPathType] = None,
         segmentation_to_imaging_map: dict = None,
+        virmen_file_path: Optional[FilePathType] = None,
+        two_photon_time_sync_file_path: Optional[FilePathType] = None,
+        two_photon_time_sync_struct_name: Optional[str] = None,
+        im_frame_timestamps_name: Optional[str] = None,
     ):
         self.verbose = verbose
         self.data_interface_objects = dict()
@@ -141,6 +146,18 @@ class IntoTheVoidNWBConverter(NWBConverter):
                         {segmentation_interface_name: Suite2pSegmentationInterface(**segmentation_source_data)}
                     )
 
+        if virmen_file_path:
+            behavior_interface = ViRMENBehaviorInterface(file_path=virmen_file_path, verbose=verbose)
+            self.data_interface_objects.update(BehaviorViRMEN=behavior_interface)
+
+        if two_photon_time_sync_file_path:
+            time_alignment_behavior_interface = ViRMENTemporalAlignmentBehaviorInterface(
+                file_path=str(two_photon_time_sync_file_path),
+                sync_data_struct_name=two_photon_time_sync_struct_name,
+                im_frame_timestamps_name=im_frame_timestamps_name,
+            )
+            self.data_interface_objects.update(BehaviorViRMENTwoPhotonTimeAligned=time_alignment_behavior_interface)
+
     def get_metadata(self) -> DeepDict:
         imaging_metadata = self.data_interface_objects["Imaging"].get_metadata()
         metadata = super().get_metadata()
@@ -158,11 +175,44 @@ class IntoTheVoidNWBConverter(NWBConverter):
             # override device link
             metadata["Ophys"]["ImagingPlane"][metadata_ind]["device"] = device_name
 
+        if "BehaviorViRMEN" in self.data_interface_objects:
+            # Explicitly set session_start_time to ViRMEN start time
+            session_start_time = self.data_interface_objects["BehaviorViRMEN"]._get_session_start_time()
+            metadata["NWBFile"]["session_start_time"] = session_start_time
+
         if "HolographicStimulation" in self.data_interface_objects:
             holographic_metadata = self.data_interface_objects["HolographicStimulation"].get_metadata()
             metadata = dict_deep_update(metadata, holographic_metadata)
 
         return metadata
+
+    def temporally_align_data_interfaces(self):
+        if "BehaviorViRMENTwoPhotonTimeAligned" not in self.data_interface_objects:
+            return
+
+        frame_time_aligned_behavior_interface = self.data_interface_objects["BehaviorViRMENTwoPhotonTimeAligned"]
+        aligned_timestamps = frame_time_aligned_behavior_interface.get_timestamps()
+        aligned_starting_time = aligned_timestamps[0]
+
+        # set aligned starting time for imaging interface
+        imaging_converter = self.data_interface_objects["Imaging"]
+        for _, imaging_interface in imaging_converter.data_interface_objects.items():
+            imaging_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
+
+        # set aligned starting time for segmentation interfaces
+        segmentation_interface_names = [
+            interface_name
+            for interface_name in self.data_interface_objects.keys()
+            if interface_name.startswith("Segmentation")
+        ]
+        for interface_name in segmentation_interface_names:
+            segmentation_interface = self.data_interface_objects[interface_name]
+            segmentation_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
+
+        # set aligned starting time for holographic stimulation interface
+        if "HolographicStimulation" in self.data_interface_objects:
+            holographic_stimulation_interface = self.data_interface_objects["HolographicStimulation"]
+            holographic_stimulation_interface.set_aligned_starting_time(aligned_starting_time=aligned_starting_time)
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata, conversion_options: Optional[dict] = None) -> None:
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
