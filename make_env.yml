@@ -1,4 +1,4 @@
-name: pinto_lab_to_nwb_env
+name: pinto-lab-to-nwb-env
 channels:
 - defaults
 - anaconda
