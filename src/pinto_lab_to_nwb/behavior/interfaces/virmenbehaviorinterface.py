@@ -1,4 +1,5 @@
 """Primary class for converting experiment-specific behavior."""
+
 import math
 from datetime import datetime
 

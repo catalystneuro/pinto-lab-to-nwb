@@ -1,4 +1,5 @@
 """Primary NWBConverter class for this dataset."""
+
 from pathlib import Path
 from typing import Optional
 
